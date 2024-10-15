@@ -1,0 +1,2 @@
+22:37:24: titi created room 12345
+22:37:25: titi joined the room
