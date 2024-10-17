@@ -264,4 +264,19 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     {
         Debug.Log($"{newMasterClient.NickName} is now the master client.");
     }
+    private IEnumerator WaitForConnectionAndCreateRoom()
+    {
+        while (!PhotonNetwork.IsConnectedAndReady)
+        {
+            yield return null;  // Wait until connected and ready
+        }
+
+        CreateCourseRoom();  // Now safe to create the room
+    }
+
+    private void OnHostButtonClicked()
+    {
+        StartCoroutine(WaitForConnectionAndCreateRoom());
+    }
+
 }
