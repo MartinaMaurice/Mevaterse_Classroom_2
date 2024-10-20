@@ -7,7 +7,6 @@ using UnityEngine.SceneManagement;
 using ExitGames.Client.Photon;
 using System.Collections.Generic;
 
-
 public static class SerializableColor
 {
     public static byte[] Serialize(object obj)
@@ -22,16 +21,16 @@ public static class SerializableColor
     }
 }
 
+
+
 public class ConnectToServer : MonoBehaviourPunCallbacks
 {
     public TMP_InputField nameInputField;
     public TMP_InputField roomNameInputField;
-    public TMP_Dropdown roleDropdown;
 
     public GameObject initialGUI;
     public GameObject loggedGUI;
     public GameObject courseCreationUI;
-
 
     public GameObject errorMessage;
 
@@ -48,8 +47,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private bool isRejoining = false;
     private CourseManager courseManager = new CourseManager();  // Initialize CourseManager
     private FirestoreManager firestoreManager;
-
-
 
     void Start()
     {
@@ -69,14 +66,13 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         loggedGUI.SetActive(false);
         errorMessage.SetActive(false);
 
-        roleDropdown.onValueChanged.AddListener(delegate { OnRoleSelected(); });
         clientButton.onClick.AddListener(ConnectWithRole);
         hostButton.onClick.AddListener(CreateCourseRoom);
         quitButton.onClick.AddListener(() => Application.Quit());
         leaveButton.onClick.AddListener(() => { buttonClick.Play(); LeaveRoom(); });
         editButton.onClick.AddListener(() => SceneManager.LoadScene("CharacterEditor"));
-
     }
+
     public override void OnConnectedToMaster()
     {
         Debug.Log("Connected to Photon Master Server");
@@ -84,12 +80,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         hostButton.enabled = true;
         clientButton.enabled = true;
     }
-    private void OnRoleSelected()
-    {
-        selectedRole = roleDropdown.options[roleDropdown.value].text;
-        Debug.Log($"Role selected: {selectedRole}");
-    }
-
 
     private void ConnectWithRole()
     {
@@ -104,7 +94,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         }
 
         PhotonNetwork.NickName = playerName;
-        Debug.Log($"Attempting to connect with role: {selectedRole}.");
 
         if (selectedRole == "Instructor")
         {
@@ -115,7 +104,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         {
             Debug.Log($"Attempting to join room with ID: {roomID} as Student.");
 
-            // Ensure we are connected to the lobby to access available rooms
             if (PhotonNetwork.InLobby)
             {
                 // Check if the course exists in Firestore
@@ -169,24 +157,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         PhotonNetwork.CreateRoom(roomID, roomOptions);
         Debug.Log($"Room {roomID} created.");
     }
-    private void JoinRoomAsStudent(string roomID)
-    {
-        // Load all courses to check if the room exists locally
-        List<Course> courses = courseManager.LoadAllCourses();
-        bool courseExists = courses.Exists(course => course.CourseID == roomID);
-
-        if (courseExists)
-        {
-            Debug.Log($"Room found locally. Joining room with ID: {roomID}");
-            PhotonNetwork.JoinRoom(roomID);  // Try joining the room
-        }
-        else
-        {
-            Debug.Log("Course not found locally, querying Photon rooms.");
-            PhotonNetwork.JoinRoom(roomID);  // Try joining the room anyway, it might be open on the Photon server
-        }
-    }
-
 
     public override void OnJoinedLobby()
     {
@@ -200,7 +170,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             JoinOrCreateRoom(roomID);  // Attempt to join the room now that we're in the lobby
         }
     }
-
 
     public override void OnJoinedRoom()
     {
@@ -238,7 +207,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     {
         Debug.Log($"Room created: {PhotonNetwork.CurrentRoom.Name}");
     }
-
 
     private void CreateCourseRoom()
     {
@@ -281,6 +249,11 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             ResetUI();
         }
     }
+    public void JoinRoom(string roomName)
+    {
+        PhotonNetwork.JoinRoom(roomName);
+    }
+
 
     private void ResetUI()
     {
@@ -291,8 +264,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         roomNameInputField.text = "";
         errorMessage.SetActive(false);
         LogAllCourses();  // Log all saved courses when resetting UI
-
     }
+
     private void LogAllCourses()
     {
         List<Course> courses = courseManager.LoadAllCourses();
@@ -310,16 +283,10 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         }
     }
 
-
     private void ShowErrorMessage(string message)
     {
         errorMessage.SetActive(true);
         errorMessage.GetComponent<TMP_Text>().text = message;
-    }
-
-    public void JoinRoom(string roomName)
-    {
-        PhotonNetwork.JoinRoom(roomName);
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
@@ -331,21 +298,4 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     {
         Debug.Log($"{newMasterClient.NickName} is now the master client.");
     }
-
-    private IEnumerator<object> WaitForConnectionAndCreateRoom()
-    {
-        while (!PhotonNetwork.IsConnectedAndReady)
-        {
-            yield return null;  // Wait until connected and ready
-        }
-
-        CreateCourseRoom();  // Now safe to create the room
-    }
-
-
-    private void OnHostButtonClicked()
-    {
-        StartCoroutine(WaitForConnectionAndCreateRoom());
-    }
-
 }
