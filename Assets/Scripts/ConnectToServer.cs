@@ -53,6 +53,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 
     void Start()
     {
+        firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
+
         if (PhotonNetwork.IsConnected)
         {
             Debug.Log("Already connected to Photon. Joining Lobby...");
@@ -63,7 +65,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             Debug.Log("Connecting to Photon...");
             PhotonNetwork.ConnectUsingSettings();
         }
-        firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
 
         loggedGUI.SetActive(false);
         errorMessage.SetActive(false);
@@ -83,12 +84,12 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         hostButton.enabled = true;
         clientButton.enabled = true;
     }
-
     private void OnRoleSelected()
     {
         selectedRole = roleDropdown.options[roleDropdown.value].text;
-        Debug.Log($"Selected Role: {selectedRole}");
+        Debug.Log($"Role selected: {selectedRole}");
     }
+
 
     private void ConnectWithRole()
     {
