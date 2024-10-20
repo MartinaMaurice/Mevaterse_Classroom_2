@@ -5951,6 +5951,7 @@ MonoBehaviour:
   courseNameInput: {fileID: 1383700695}
   courseIdInput: {fileID: 1779729747}
   courseCreationUI: {fileID: 450693983}
+  initialGUI: {fileID: 688389552}
 --- !u!54 &454057441
 Rigidbody:
   m_ObjectHideFlags: 0
