@@ -10,7 +10,13 @@ public class CourseCreation : MonoBehaviour
     public TMP_InputField courseIdInput;
     public GameObject courseCreationUI;
 
+    private FirestoreManager firestoreManager;
     private CourseManager courseManager = new CourseManager();  // Initialize CourseManager
+
+    void Start()
+    {
+        firestoreManager = FindObjectOfType<FirestoreManager>();
+    }
 
     public void OnHostButtonClicked()
     {
@@ -23,16 +29,19 @@ public class CourseCreation : MonoBehaviour
             return;
         }
 
-        // Save the new course
+        // Save the new course locally
         Course newCourse = new Course(courseName, courseId);
-        FindObjectOfType<CourseManager>().AddCourse(newCourse);  // Save the course
+        FindObjectOfType<CourseManager>().AddCourse(newCourse);  // Save the course locally
+
+        // Save the new course to Firestore
+        firestoreManager.SaveCourse(newCourse);
 
         // Create Photon Room
         Hashtable roomProperties = new Hashtable
-    {
-        { "CourseName", courseName },
-        { "CourseID", courseId }
-    };
+        {
+            { "CourseName", courseName },
+            { "CourseID", courseId }
+        };
 
         RoomOptions roomOptions = new RoomOptions
         {

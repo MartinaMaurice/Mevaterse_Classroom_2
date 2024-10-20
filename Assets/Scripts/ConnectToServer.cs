@@ -47,6 +47,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private string selectedRole;
     private bool isRejoining = false;
     private CourseManager courseManager = new CourseManager();  // Initialize CourseManager
+    private FirestoreManager firestoreManager;
 
 
 
@@ -62,6 +63,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             Debug.Log("Connecting to Photon...");
             PhotonNetwork.ConnectUsingSettings();
         }
+        firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
 
         loggedGUI.SetActive(false);
         errorMessage.SetActive(false);
@@ -72,6 +74,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         quitButton.onClick.AddListener(() => Application.Quit());
         leaveButton.onClick.AddListener(() => { buttonClick.Play(); LeaveRoom(); });
         editButton.onClick.AddListener(() => SceneManager.LoadScene("CharacterEditor"));
+
     }
     public override void OnConnectedToMaster()
     {
@@ -95,29 +98,36 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         if (string.IsNullOrEmpty(playerName) || string.IsNullOrEmpty(roomID))
         {
             ShowErrorMessage("Player Name and Room ID are required.");
+            Debug.LogError("Player name or room ID is missing.");
             return;
         }
 
         PhotonNetwork.NickName = playerName;
+        Debug.Log($"Attempting to connect with role: {selectedRole}.");
 
         if (selectedRole == "Instructor")
         {
             courseCreationUI.SetActive(true);
+            Debug.Log("Instructor role selected, showing course creation UI.");
         }
         else if (selectedRole == "Student")
         {
-            Debug.Log($"Attempting to join room with ID: {roomID}");
+            Debug.Log($"Attempting to join room with ID: {roomID} as Student.");
 
             // Ensure we are connected to the lobby to access available rooms
             if (PhotonNetwork.InLobby)
             {
-                if (courseManager.CourseExists(roomID))
+                // Check if the course exists in Firestore
+                if (firestoreManager.CourseExistsInFirestore(roomID))
                 {
-                    PhotonNetwork.JoinRoom(roomID);
+                    Debug.Log($"Course found in Firestore, attempting to join room: {roomID}");
+                    // Try to join the room, or create it if it doesn't exist
+                    JoinOrCreateRoom(roomID);
                 }
                 else
                 {
-                    ShowErrorMessage("Course not found. Please check the Room ID.");
+                    ShowErrorMessage("Course not found in Firestore. Please check the Room ID.");
+                    Debug.LogError("Course not found in Firestore.");
                 }
             }
             else
@@ -125,6 +135,68 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
                 Debug.LogWarning("Not in lobby. Joining lobby...");
                 PhotonNetwork.JoinLobby();  // Ensure we join the lobby before attempting to join a room
             }
+        }
+    }
+
+    private void JoinOrCreateRoom(string roomID)
+    {
+        Debug.Log($"Trying to join room: {roomID}");
+        PhotonNetwork.JoinRoom(roomID);
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        Debug.LogWarning($"Failed to join room: {message}. Room ID {roomNameInputField.text} does not exist. Attempting to create room.");
+
+        // If the room doesn't exist, create it automatically
+        CreateRoom(roomNameInputField.text);
+    }
+
+    private void CreateRoom(string roomID)
+    {
+        Debug.Log($"Creating room with ID: {roomID}");
+        RoomOptions roomOptions = new RoomOptions
+        {
+            MaxPlayers = 20,
+            IsVisible = true,
+            IsOpen = true,
+            CleanupCacheOnLeave = false,
+            CustomRoomProperties = new Hashtable { { "CourseID", roomID } },
+            CustomRoomPropertiesForLobby = new string[] { "CourseID" }
+        };
+
+        PhotonNetwork.CreateRoom(roomID, roomOptions);
+        Debug.Log($"Room {roomID} created.");
+    }
+    private void JoinRoomAsStudent(string roomID)
+    {
+        // Load all courses to check if the room exists locally
+        List<Course> courses = courseManager.LoadAllCourses();
+        bool courseExists = courses.Exists(course => course.CourseID == roomID);
+
+        if (courseExists)
+        {
+            Debug.Log($"Room found locally. Joining room with ID: {roomID}");
+            PhotonNetwork.JoinRoom(roomID);  // Try joining the room
+        }
+        else
+        {
+            Debug.Log("Course not found locally, querying Photon rooms.");
+            PhotonNetwork.JoinRoom(roomID);  // Try joining the room anyway, it might be open on the Photon server
+        }
+    }
+
+
+    public override void OnJoinedLobby()
+    {
+        Debug.Log("Successfully joined the Photon Lobby.");
+
+        // Attempt to join the room once connected to the lobby
+        string roomID = roomNameInputField.text;
+        if (!string.IsNullOrEmpty(roomID) && selectedRole == "Student")
+        {
+            Debug.Log($"Attempting to join or create room after joining lobby. Room ID: {roomID}");
+            JoinOrCreateRoom(roomID);  // Attempt to join the room now that we're in the lobby
         }
     }
 
@@ -159,12 +231,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
                 followScript.target = myPlayer;
             }
         }
-    }
-
-    public override void OnJoinRoomFailed(short returnCode, string message)
-    {
-        Debug.LogError($"Failed to join room. Return Code: {returnCode}, Message: {message}");
-        ShowErrorMessage("Room not found. Please check the Room ID.");
     }
 
     public override void OnCreatedRoom()
