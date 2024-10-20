@@ -123,7 +123,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
                 {
                     Debug.Log($"Course found in Firestore, attempting to join room: {roomID}");
                     // Try to join the room, or create it if it doesn't exist
-                    JoinOrCreateRoom(roomID);
+                    JoinRoomAsStudent(roomID);
                 }
                 else
                 {
@@ -172,19 +172,23 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     }
     private void JoinRoomAsStudent(string roomID)
     {
-        // Load all courses to check if the room exists locally
-        List<Course> courses = courseManager.LoadAllCourses();
-        bool courseExists = courses.Exists(course => course.CourseID == roomID);
+        string courseId = roomNameInputField.text;
 
-        if (courseExists)
+        if (string.IsNullOrEmpty(courseId))
         {
-            Debug.Log($"Room found locally. Joining room with ID: {roomID}");
-            PhotonNetwork.JoinRoom(roomID);  // Try joining the room
+            Debug.LogWarning("Course ID cannot be empty!");
+            return;
+        }
+
+        // Check if the course exists in the local course manager
+        if (courseManager.CourseExists(courseId))
+        {
+            Debug.Log($"Course with ID {courseId} found. Attempting to join the room.");
+            PhotonNetwork.JoinRoom(courseId);
         }
         else
         {
-            Debug.Log("Course not found locally, querying Photon rooms.");
-            PhotonNetwork.JoinRoom(roomID);  // Try joining the room anyway, it might be open on the Photon server
+            Debug.LogWarning("Course not found in the local data. Please check the Course ID.");
         }
     }
 
@@ -219,6 +223,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         }
 
         initialGUI.SetActive(false);
+        courseCreationUI.SetActive(false);
+
         loggedGUI.SetActive(true);
 
         GameObject myPlayer = PhotonNetwork.Instantiate(player.name, Vector3.zero, Quaternion.identity);
