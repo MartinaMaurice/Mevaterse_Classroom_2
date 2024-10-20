@@ -1,3 +1,4 @@
+
 # This .gitignore file should be placed at the root of your Unity project directory
 #
 # Get latest from https://github.com/github/gitignore/blob/main/Unity.gitignore
@@ -70,3 +71,7 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+# Ignore Firebase large files
+Assets/Firebase/Plugins/x86_64/FirebaseCppApp-12_3_0.bundle
+Assets/Firebase/Plugins/x86_64/FirebaseCppApp-12_3_0.so
+
