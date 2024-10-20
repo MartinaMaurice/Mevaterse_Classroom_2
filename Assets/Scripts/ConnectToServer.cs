@@ -265,7 +265,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         Debug.Log($"{newMasterClient.NickName} is now the master client.");
     }
 
-    private IEnumerator WaitForConnectionAndCreateRoom()
+    private IEnumerator<object> WaitForConnectionAndCreateRoom()
     {
         while (!PhotonNetwork.IsConnectedAndReady)
         {
