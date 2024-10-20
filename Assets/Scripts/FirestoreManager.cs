@@ -55,23 +55,21 @@ public class FirestoreManager : MonoBehaviour
     }
 
     // Save course data to Firestore
-    public void SaveCourse(Course course)
+    public void SaveCourse(Course newCourse)
     {
-        Dictionary<string, object> courseData = new Dictionary<string, object>
+        db.Collection("Courses").Document(newCourse.CourseID).SetAsync(new
         {
-            { "CourseName", course.CourseName },
-            { "CourseID", course.CourseID }
-        };
-
-        db.Collection("Courses").Document(course.CourseID).SetAsync(courseData).ContinueWithOnMainThread(task =>
+            CourseName = newCourse.CourseName,
+            CourseID = newCourse.CourseID
+        }).ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted)
             {
-                Debug.Log("Course data saved successfully.");
+                Debug.Log("Course saved to Firestore");
             }
             else
             {
-                Debug.LogError("Failed to save course data: " + task.Exception);
+                Debug.LogError("Failed to save course to Firestore: " + task.Exception);
             }
         });
     }

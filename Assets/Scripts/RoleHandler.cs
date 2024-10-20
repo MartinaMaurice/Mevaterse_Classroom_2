@@ -1,6 +1,7 @@
 using UnityEngine;
-using TMPro;
-using Photon.Pun;
+using UnityEngine.SceneManagement;
+using TMPro;  // For handling TextMeshPro inputs.
+using Photon.Pun;  // Include Photon namespace to access PhotonNetwork.
 
 public class RoleHandler : MonoBehaviour
 {
@@ -24,9 +25,8 @@ public class RoleHandler : MonoBehaviour
     public void OnRoleSelected()
     {
         selectedRole = roleDropdown.options[roleDropdown.value].text;
-        Debug.Log($"Selected role: {selectedRole}");
-    }
 
+    }
     public void OnConnectClicked()
     {
         string playerName = playerNameInput.text;
@@ -36,7 +36,7 @@ public class RoleHandler : MonoBehaviour
 
         if (selectedRole == "Instructor")
         {
-            // Instructors go to course creation UI
+            // If already connected, navigate to Course Creation Scene
             if (PhotonNetwork.IsConnected)
             {
                 courseCreationUI.SetActive(true);
@@ -51,7 +51,7 @@ public class RoleHandler : MonoBehaviour
         {
             if (PhotonNetwork.IsConnected)
             {
-                Debug.Log($"Attempting to join room with ID: {roomName}");
+                Debug.LogError($"Attempting to join room with ID: {roomName}");
                 FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
             }
             else
@@ -60,4 +60,7 @@ public class RoleHandler : MonoBehaviour
             }
         }
     }
+
+
+
 }
