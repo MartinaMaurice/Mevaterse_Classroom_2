@@ -1,32 +1,72 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using TMPro;  // For handling TextMeshPro inputs.
 using Photon.Pun;  // Include Photon namespace to access PhotonNetwork.
+using Firebase.Firestore;
+using Firebase.Extensions;
+using System.Collections.Generic;
 
 public class RoleHandler : MonoBehaviour
 {
     public TMP_Dropdown roleDropdown;
     public TMP_InputField playerNameInput;
     public TMP_InputField roomNameInput;
-    public GameObject connectButton;
 
-    public GameObject courseCreationUI;  // Reference to the Course Creation UI
-    public GameObject initialUI;  // Reference to the initial UI
+    public GameObject connectButton;
+    public GameObject courseCreationUI;
+    public GameObject initialUI;
+    public GameObject toolkitButton;
+
+    private FirebaseFirestore db;
     private string selectedRole;
+    private string userId;
 
     void Start()
     {
         courseCreationUI.SetActive(false);
+        toolkitButton.SetActive(false); // Hide toolkit button initially
 
-        // Setup listener for role selection.
+        roleDropdown.value = 0;  // Assuming 0 is Instructor and 1 is Student
+        selectedRole = "Student";  // Default to student
+
+        db = FirebaseFirestore.DefaultInstance;
+
+        // Role selection will only update the selectedRole variable, no saving
         roleDropdown.onValueChanged.AddListener(delegate { OnRoleSelected(); });
     }
 
     public void OnRoleSelected()
     {
+        // Update the selectedRole variable based on dropdown selection
         selectedRole = roleDropdown.options[roleDropdown.value].text;
 
+        // Show or hide the toolkit button based on the role selected
+        if (selectedRole == "Instructor")
+        {
+            toolkitButton.SetActive(true);
+        }
+        else
+        {
+            toolkitButton.SetActive(false);
+        }
     }
+
+    // This function is called when the "Select Role" button is clicked
+    public void OnSelectRoleClicked()
+    {
+        string playerName = playerNameInput.text;
+
+        // Ensure that player name and role are not empty
+        if (string.IsNullOrEmpty(playerName) || string.IsNullOrEmpty(selectedRole))
+        {
+            Debug.LogError("Player name and role must be selected.");
+            return;
+        }
+
+        // Save the user to Firestore when the "Select Role" button is clicked
+        userId = db.Collection("users").Document().Id;
+        SaveUserToFirestore(playerName, selectedRole);
+    }
+
     public void OnConnectClicked()
     {
         string playerName = playerNameInput.text;
@@ -36,7 +76,6 @@ public class RoleHandler : MonoBehaviour
 
         if (selectedRole == "Instructor")
         {
-            // If already connected, navigate to Course Creation Scene
             if (PhotonNetwork.IsConnected)
             {
                 courseCreationUI.SetActive(true);
@@ -61,6 +100,27 @@ public class RoleHandler : MonoBehaviour
         }
     }
 
+    // Function to save the user information to Firestore
+    void SaveUserToFirestore(string name, string role)
+    {
+        Dictionary<string, object> userDoc = new Dictionary<string, object>
+        {
+            { "name", name },
+            { "role", role },
+            { "id", userId }
+        };
 
-
+        db.Collection("users").Document(userId).SetAsync(userDoc).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                Debug.Log("User successfully added to Firestore.");
+                PlayerPrefs.SetString("UserID", userId); // Save user ID locally for future use
+            }
+            else
+            {
+                Debug.LogError("Error adding user: " + task.Exception);
+            }
+        });
+    }
 }

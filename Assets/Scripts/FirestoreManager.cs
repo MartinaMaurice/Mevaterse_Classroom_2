@@ -27,6 +27,7 @@ public class FirestoreManager : MonoBehaviour
         db.Collection("Quizzes");      // Quizzes collection
         db.Collection("Grades");       // Grades collection
         db.Collection("LeadershipBoard"); // Leadership Board collection
+        db.Collection("Slides");
 
         // Log success message
         Debug.Log("Firestore collections initialized for future use.");
