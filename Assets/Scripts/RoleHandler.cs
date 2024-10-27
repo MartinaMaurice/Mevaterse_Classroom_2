@@ -90,8 +90,19 @@ public class RoleHandler : MonoBehaviour
         {
             if (PhotonNetwork.IsConnected)
             {
-                Debug.LogError($"Attempting to join room with ID: {roomName}");
-                FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
+                // Check if the course exists in Firestore before attempting to join
+                CheckCourseExistsInFirestore(roomName, exists =>
+                {
+                    if (exists)
+                    {
+                        Debug.Log($"Course with ID {roomName} found. Attempting to join room.");
+                        FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
+                    }
+                    else
+                    {
+                        Debug.LogError("Course not found in Firestore. Please check the Course ID.");
+                    }
+                });
             }
             else
             {
@@ -99,6 +110,34 @@ public class RoleHandler : MonoBehaviour
             }
         }
     }
+    private void CheckCourseExistsInFirestore(string courseId, System.Action<bool> callback)
+    {
+        Debug.Log($"Attempting to find course with ID: {courseId}");
+
+        db.Collection("Courses").Document(courseId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                DocumentSnapshot snapshot = task.Result;
+                if (snapshot.Exists)
+                {
+                    Debug.Log("Course found in Firestore.");
+                    callback(true); // Course exists
+                }
+                else
+                {
+                    Debug.LogWarning("Course does not exist in Firestore.");
+                    callback(false); // Course does not exist
+                }
+            }
+            else
+            {
+                Debug.LogError("Failed to check course in Firestore: " + task.Exception);
+                callback(false);
+            }
+        });
+    }
+
 
     // Function to save the user information to Firestore
     void SaveUserToFirestore(string name, string role)
