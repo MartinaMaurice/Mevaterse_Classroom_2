@@ -6,6 +6,8 @@ using System.IO;
 using ExcelDataReader;
 using Firebase.Extensions;
 using SFB;
+using System; // Make sure to include this for IntPtr
+
 
 public class InstructorToolkit : MonoBehaviour
 {
@@ -18,7 +20,8 @@ public class InstructorToolkit : MonoBehaviour
 
     private FirebaseFirestore db;
 
-    // public Button futureOptionButton; 
+    public GameObject slideDisplayPanel; // Assign in the Inspector
+    int pageCount = 5; // Set this to the number of images you expect
 
     void Start()
     {
@@ -124,112 +127,138 @@ public class InstructorToolkit : MonoBehaviour
             }
         });
     }
-    // void AddSlides()
-    // {
-    //     Debug.Log("Instructor wants to add PDF slides.");
-
-    //     string filePath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
-    //     if (!string.IsNullOrEmpty(filePath))
-    //     {
-    //         List<Texture2D> slides = ExtractPDFPagesAsImages(filePath);
-    //         SaveSlidesToFirestore(slides);
-    //         SaveSlidesToLocal(slides, "lecture_pdf");
-    //     }
-    // }
-
-    // // Extract PDF pages as images using iTextSharp
-    // public List<Texture2D> ExtractPDFPagesAsImages(string filePath)
-    // {
-    //     List<Texture2D> slideImages = new List<Texture2D>();
-    //     PdfReader reader = new PdfReader(filePath);
-
-    //     for (int pageIndex = 1; pageIndex <= reader.NumberOfPages; pageIndex++)
-    //     {
-    //         // Render each page as an image
-    //         PdfDictionary pageDict = reader.GetPageN(pageIndex);
-    //         PdfDictionary resources = (PdfDictionary)PdfReader.GetPdfObject(pageDict.Get(PdfName.RESOURCES));
-    //         PdfDictionary xObject = (PdfDictionary)PdfReader.GetPdfObject(resources.Get(PdfName.XOBJECT));
-
-    //         if (xObject != null)
-    //         {
-    //             foreach (PdfName name in xObject.Keys)
-    //             {
-    //                 PdfObject obj = xObject.Get(name);
-    //                 if (obj.IsIndirect())
-    //                 {
-    //                     PdfDictionary imgDict = (PdfDictionary)PdfReader.GetPdfObject(obj);
-    //                     PdfName subtype = (PdfName)PdfReader.GetPdfObject(imgDict.Get(PdfName.SUBTYPE));
-    //                     if (PdfName.IMAGE.Equals(subtype))
-    //                     {
-    //                         int xrefIndex = ((PRIndirectReference)obj).Number;
-    //                         PdfObject pdfObj = reader.GetPdfObject(xrefIndex);
-    //                         PdfStream pdfStream = (PdfStream)pdfObj;
-    //                         byte[] imgBytes = PdfReader.GetStreamBytesRaw((PRStream)pdfStream);
-
-    //                         if (imgBytes != null)
-    //                         {
-    //                             Texture2D slideImage = new Texture2D(2, 2);
-    //                             slideImage.LoadImage(imgBytes);
-    //                             slideImages.Add(slideImage);
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     reader.Close();
-    //     return slideImages;
-    // }
-
-    // // Save slides to Firestore
-    // void SaveSlidesToFirestore(List<Texture2D> slides)
-    // {
-    //     string slidesId = db.Collection("slides").Document().Id; // Auto-generate slides ID
-    //     string userId = PlayerPrefs.GetString("UserID");
-
-    //     Dictionary<string, object> slidesDoc = new Dictionary<string, object>
-    //     {
-    //         { "user_id", userId },
-    //         { "slides_id", slidesId },
-    //         { "lecture_number", 1 },  // This would increment accordingly
-    //         { "slides", slides.Count }  // Just save the number of slides for now, Firebase doesn't store binary images.
-    //     };
-
-    //     db.Collection("slides").Document(slidesId).SetAsync(slidesDoc).ContinueWithOnMainThread(task =>
-    //     {
-    //         if (task.IsCompleted)
-    //         {
-    //             Debug.Log("Slides successfully added to Firestore.");
-    //         }
-    //         else
-    //         {
-    //             Debug.LogError("Error adding slides: " + task.Exception);
-    //         }
-    //     });
-    // }
-
-    // // Save slides to local storage
-    // void SaveSlidesToLocal(List<Texture2D> slides, string lectureFolder)
-    // {
-    //     string folderPath = System.IO.Path.Combine(Application.dataPath, "Resources/Images", PlayerPrefs.GetString("UserID"), lectureFolder);
-    //     if (!Directory.Exists(folderPath))
-    //     {
-    //         Directory.CreateDirectory(folderPath);
-    //     }
-
-    //     for (int i = 0; i < slides.Count; i++)
-    //     {
-    //         byte[] bytes = slides[i].EncodeToPNG();
-    //         File.WriteAllBytes(System.IO.Path.Combine(folderPath, $"slide_{i + 1}.png"), bytes);
-    //     }
-
-    //     Debug.Log($"Slides saved locally to: {folderPath}");
-    // }
-
-
     void AddSlides()
     {
         Debug.Log("Instructor wants to add slides.");
+
+        // Open file dialog to select PDF
+        string filePath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
+        if (!string.IsNullOrEmpty(filePath))
+        {
+            string lectureName = "Lecture_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss"); // Unique folder name
+            string folderPath = Path.Combine(Application.persistentDataPath, "Images", lectureName);
+
+            Directory.CreateDirectory(folderPath); // Ensure the directory exists
+
+            // Call ConvertPDFToImages with both parameters
+            List<string> slidePaths = ConvertPDFToImages(filePath, folderPath);
+
+            // Save slides to Firebase
+            SaveSlidesToFirestore(slidePaths, lectureName);
+
+            // Save slides locally
+            List<Texture2D> slidesTextures = new List<Texture2D>();
+            foreach (string path in slidePaths)
+            {
+                slidesTextures.Add(LoadImageFromPath(path));
+            }
+            SaveSlidesToLocal(slidesTextures, lectureName);
+
+            // Display slides
+            DisplaySlides(slidePaths);
+        }
+    }
+
+
+    // Simulate creating placeholder images as slides
+    List<string> ConvertPDFToImages(string pdfFilePath, string saveFolderPath)
+    {
+        PDFToImage.Initialize(); // Initialize PDFium
+
+        List<string> slidePaths = new List<string>();
+        IntPtr document = PDFToImage.FPDF_LoadDocument(pdfFilePath, null);
+        int pageCount = PDFToImage.FPDF_GetPageCount(document);
+
+        for (int i = 0; i < pageCount; i++)
+        {
+            Texture2D slideImage = PDFToImage.RenderPage(pdfFilePath, i, 1024, 1024); // Adjust dimensions as needed
+            if (slideImage != null)
+            {
+                string slidePath = Path.Combine(saveFolderPath, $"slide_{i + 1}.png");
+                byte[] imageBytes = slideImage.EncodeToPNG();
+                File.WriteAllBytes(slidePath, imageBytes);
+
+                slidePaths.Add(slidePath);
+            }
+        }
+
+        PDFToImage.FPDF_CloseDocument(document); // Close document after processing
+        PDFToImage.Destroy(); // Cleanup PDFium
+
+        return slidePaths;
+    }
+
+
+    // Save slide references to Firestore
+    void SaveSlidesToFirestore(List<string> slidePaths, string lectureName)
+    {
+        string slidesId = db.Collection("slides").Document().Id;
+        string userId = PlayerPrefs.GetString("UserID");
+
+        Dictionary<string, object> slidesDoc = new Dictionary<string, object>
+        {
+            { "user_id", userId },
+            { "slides_id", slidesId },
+            { "lecture_name", lectureName },
+            { "slides", slidePaths }
+        };
+
+        db.Collection("slides").Document(slidesId).SetAsync(slidesDoc).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                Debug.Log("Slides successfully added to Firestore.");
+            }
+            else
+            {
+                Debug.LogError("Error adding slides: " + task.Exception);
+            }
+        });
+    }
+    void SaveSlidesToLocal(List<Texture2D> slides, string lectureFolder)
+    {
+        // Define the folder path in Assets/Resources/Images
+        string folderPath = Path.Combine(Application.dataPath, "Resources/Images", lectureFolder);
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath); // Create directory if it doesn't exist
+        }
+
+        for (int i = 0; i < slides.Count; i++)
+        {
+            byte[] bytes = slides[i].EncodeToPNG();
+            string filePath = Path.Combine(folderPath, $"slide_{i + 1}.png");
+            File.WriteAllBytes(filePath, bytes); // Save each slide as a PNG
+        }
+
+        Debug.Log($"Slides saved locally to: {folderPath}");
+    }
+
+    // Display slides in Unity UI
+    void DisplaySlides(List<string> slidePaths)
+    {
+        // Clear previous slides in UI display
+        foreach (Transform child in slideDisplayPanel.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (string path in slidePaths)
+        {
+            Texture2D slideImage = LoadImageFromPath(path);
+            GameObject slideObj = new GameObject("Slide");
+            slideObj.transform.SetParent(slideDisplayPanel.transform);
+
+            Image slideUIImage = slideObj.AddComponent<Image>();
+            slideUIImage.sprite = Sprite.Create(slideImage, new Rect(0, 0, slideImage.width, slideImage.height), new Vector2(0.5f, 0.5f));
+        }
+    }
+
+    Texture2D LoadImageFromPath(string filePath)
+    {
+        byte[] imageData = File.ReadAllBytes(filePath);
+        Texture2D texture = new Texture2D(2, 2);
+        texture.LoadImage(imageData);
+        return texture;
     }
 }

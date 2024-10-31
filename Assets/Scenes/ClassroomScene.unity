@@ -2733,6 +2733,7 @@ MonoBehaviour:
   addQuizButton: {fileID: 24867806}
   addSlidesButton: {fileID: 1886350846}
   closeButton: {fileID: 2092510960}
+  slideDisplayPanel: {fileID: 2193423312837781259}
 --- !u!54 &163662607
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -16099,7 +16100,8 @@ MonoBehaviour:
   Synchronization: 1
   OwnershipTransfer: 0
   observableSearch: 2
-  ObservedComponents: []
+  ObservedComponents:
+  - {fileID: 1102859756}
   sceneViewId: 103
   InstantiationId: 0
   isRuntimeInstantiated: 0
