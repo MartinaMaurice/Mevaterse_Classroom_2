@@ -2,11 +2,13 @@ using UnityEngine;
 using UnityEngine.UI;
 using Firebase.Firestore;
 using System.Collections.Generic;
+using UnityDebug = UnityEngine.Debug;
+using System.Diagnostics;
 using System.IO;
-using ExcelDataReader;
 using Firebase.Extensions;
 using SFB;
-using System; // Make sure to include this for IntPtr
+using System;
+using ExcelDataReader;
 
 
 public class InstructorToolkit : MonoBehaviour
@@ -21,7 +23,7 @@ public class InstructorToolkit : MonoBehaviour
     private FirebaseFirestore db;
 
     public GameObject slideDisplayPanel; // Assign in the Inspector
-    int pageCount = 5; // Set this to the number of images you expect
+    public string pythonPath = "cmd.exe";
 
     void Start()
     {
@@ -58,7 +60,7 @@ public class InstructorToolkit : MonoBehaviour
 
     void AddQuiz()
     {
-        Debug.Log("Instructor wants to add a quiz.");
+        UnityDebug.Log("Instructor wants to add a quiz.");
 
         string filePath = StandaloneFileBrowser.OpenFilePanel("Select Quiz Excel", "", "xlsx", false)[0]; // File browser for Excel file
         if (!string.IsNullOrEmpty(filePath))
@@ -119,125 +121,84 @@ public class InstructorToolkit : MonoBehaviour
         {
             if (task.IsCompleted)
             {
-                Debug.Log("Quiz successfully added to Firestore.");
+                UnityDebug.Log("Quiz successfully added to Firestore.");
             }
             else
             {
-                Debug.LogError("Error adding quiz: " + task.Exception);
+                UnityDebug.LogError("Error adding quiz: " + task.Exception);
             }
         });
     }
     void AddSlides()
     {
-        Debug.Log("Instructor wants to add slides.");
+        UnityDebug.Log("Instructor wants to add slides.");
 
-        // Open file dialog to select PDF
         string filePath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
         if (!string.IsNullOrEmpty(filePath))
         {
-            string lectureName = "Lecture_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss"); // Unique folder name
+            string lectureName = "Lecture_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
             string folderPath = Path.Combine(Application.persistentDataPath, "Images", lectureName);
 
-            Directory.CreateDirectory(folderPath); // Ensure the directory exists
+            Directory.CreateDirectory(folderPath);
 
-            // Call ConvertPDFToImages with both parameters
-            List<string> slidePaths = ConvertPDFToImages(filePath, folderPath);
+            // Run the Python script to convert the PDF to images
+            List<string> slidePaths = RunPythonScript(filePath, folderPath);
 
-            // Save slides to Firebase
-            SaveSlidesToFirestore(slidePaths, lectureName);
-
-            // Save slides locally
-            List<Texture2D> slidesTextures = new List<Texture2D>();
-            foreach (string path in slidePaths)
+            // Display slides in Unity
+            if (slidePaths != null && slidePaths.Count > 0)
             {
-                slidesTextures.Add(LoadImageFromPath(path));
+                DisplaySlides(slidePaths);
             }
-            SaveSlidesToLocal(slidesTextures, lectureName);
-
-            // Display slides
-            DisplaySlides(slidePaths);
+            else
+            {
+                UnityDebug.LogError("Failed to generate slides using the Python script.");
+            }
         }
     }
 
-
-    // Simulate creating placeholder images as slides
-    List<string> ConvertPDFToImages(string pdfFilePath, string saveFolderPath)
+    List<string> RunPythonScript(string pdfPath, string outputFolder)
     {
-        PDFToImage.Initialize(); // Initialize PDFium
-
         List<string> slidePaths = new List<string>();
-        IntPtr document = PDFToImage.FPDF_LoadDocument(pdfFilePath, null);
-        int pageCount = PDFToImage.FPDF_GetPageCount(document);
 
-        for (int i = 0; i < pageCount; i++)
+        ProcessStartInfo startInfo = new ProcessStartInfo
         {
-            Texture2D slideImage = PDFToImage.RenderPage(pdfFilePath, i, 1024, 1024); // Adjust dimensions as needed
-            if (slideImage != null)
+            FileName = pythonPath,
+            Arguments = $"/c \"\"C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe\" \"{Application.dataPath}/convert_pdf.py\" \"{pdfPath}\" \"{outputFolder}\"\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+
+        using (Process process = Process.Start(start))
+        {
+            using (StreamReader reader = process.StandardOutput)
             {
-                string slidePath = Path.Combine(saveFolderPath, $"slide_{i + 1}.png");
-                byte[] imageBytes = slideImage.EncodeToPNG();
-                File.WriteAllBytes(slidePath, imageBytes);
+                string result = reader.ReadToEnd();
+                string[] imagePaths = result.Split(new[] { "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
 
-                slidePaths.Add(slidePath);
+                // Add each path to the slidePaths list
+                foreach (string path in imagePaths)
+                {
+                    slidePaths.Add(path.Trim());
+                }
             }
-        }
 
-        PDFToImage.FPDF_CloseDocument(document); // Close document after processing
-        PDFToImage.Destroy(); // Cleanup PDFium
+            string error = process.StandardError.ReadToEnd();
+            if (!string.IsNullOrEmpty(error))
+            {
+                UnityDebug.LogError("Python error: " + error);
+            }
+
+            process.WaitForExit();
+        }
 
         return slidePaths;
     }
 
-
-    // Save slide references to Firestore
-    void SaveSlidesToFirestore(List<string> slidePaths, string lectureName)
-    {
-        string slidesId = db.Collection("slides").Document().Id;
-        string userId = PlayerPrefs.GetString("UserID");
-
-        Dictionary<string, object> slidesDoc = new Dictionary<string, object>
-        {
-            { "user_id", userId },
-            { "slides_id", slidesId },
-            { "lecture_name", lectureName },
-            { "slides", slidePaths }
-        };
-
-        db.Collection("slides").Document(slidesId).SetAsync(slidesDoc).ContinueWithOnMainThread(task =>
-        {
-            if (task.IsCompleted)
-            {
-                Debug.Log("Slides successfully added to Firestore.");
-            }
-            else
-            {
-                Debug.LogError("Error adding slides: " + task.Exception);
-            }
-        });
-    }
-    void SaveSlidesToLocal(List<Texture2D> slides, string lectureFolder)
-    {
-        // Define the folder path in Assets/Resources/Images
-        string folderPath = Path.Combine(Application.dataPath, "Resources/Images", lectureFolder);
-        if (!Directory.Exists(folderPath))
-        {
-            Directory.CreateDirectory(folderPath); // Create directory if it doesn't exist
-        }
-
-        for (int i = 0; i < slides.Count; i++)
-        {
-            byte[] bytes = slides[i].EncodeToPNG();
-            string filePath = Path.Combine(folderPath, $"slide_{i + 1}.png");
-            File.WriteAllBytes(filePath, bytes); // Save each slide as a PNG
-        }
-
-        Debug.Log($"Slides saved locally to: {folderPath}");
-    }
-
-    // Display slides in Unity UI
     void DisplaySlides(List<string> slidePaths)
     {
-        // Clear previous slides in UI display
         foreach (Transform child in slideDisplayPanel.transform)
         {
             Destroy(child.gameObject);
@@ -246,11 +207,14 @@ public class InstructorToolkit : MonoBehaviour
         foreach (string path in slidePaths)
         {
             Texture2D slideImage = LoadImageFromPath(path);
-            GameObject slideObj = new GameObject("Slide");
-            slideObj.transform.SetParent(slideDisplayPanel.transform);
+            if (slideImage != null)
+            {
+                GameObject slideObj = new GameObject("Slide");
+                slideObj.transform.SetParent(slideDisplayPanel.transform);
 
-            Image slideUIImage = slideObj.AddComponent<Image>();
-            slideUIImage.sprite = Sprite.Create(slideImage, new Rect(0, 0, slideImage.width, slideImage.height), new Vector2(0.5f, 0.5f));
+                Image slideUIImage = slideObj.AddComponent<Image>();
+                slideUIImage.sprite = Sprite.Create(slideImage, new Rect(0, 0, slideImage.width, slideImage.height), new Vector2(0.5f, 0.5f));
+            }
         }
     }
 
@@ -261,4 +225,5 @@ public class InstructorToolkit : MonoBehaviour
         texture.LoadImage(imageData);
         return texture;
     }
+
 }

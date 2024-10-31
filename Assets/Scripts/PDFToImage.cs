@@ -37,20 +37,17 @@ public class PDFToImage
     [DllImport("pdfium")]
     public static extern void FPDF_DestroyLibrary();
 
-    // Call this method before using PDFium
     public static void Initialize()
     {
         FPDF_InitLibrary();
     }
 
-    // Call this method to free resources
     public static void Destroy()
     {
         FPDF_DestroyLibrary();
     }
 
-    // Render a specific page to a Texture2D
-    public static Texture2D RenderPage(string pdfPath, int pageNumber, int width = 800, int height = 800)
+    public static Texture2D RenderPage(string pdfPath, int pageNumber, int width = 1024, int height = 1024)
     {
         IntPtr document = FPDF_LoadDocument(pdfPath, null);
         if (document == IntPtr.Zero)
@@ -67,28 +64,23 @@ public class PDFToImage
             return null;
         }
 
-        // Create a bitmap in PDFium
-        IntPtr bitmap = FPDFBitmap_Create(width, height, 1); // 1 enables alpha channel
-        int renderFlags = 0x10 | 0x20 | 0x800; // FPDF_ANNOT | FPDF_LCD_TEXT | FPDF_NO_CATCH
+        IntPtr bitmap = FPDFBitmap_Create(width, height, 1);
+        int renderFlags = 0x10 | 0x20 | 0x800;
 
-        // Render the page to the bitmap with additional render flags
         FPDF_RenderPage(bitmap, page, 0, 0, width, height, 0, renderFlags);
 
-        // Get bitmap buffer and convert to Texture2D
         IntPtr buffer = FPDFBitmap_GetBuffer(bitmap);
-        byte[] imageBytes = new byte[width * height * 4]; // RGBA format
+        byte[] imageBytes = new byte[width * height * 4];
         Marshal.Copy(buffer, imageBytes, 0, imageBytes.Length);
 
         Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
         texture.LoadRawTextureData(imageBytes);
         texture.Apply();
 
-        // Clean up resources
         FPDFBitmap_Destroy(bitmap);
         FPDF_ClosePage(page);
         FPDF_CloseDocument(document);
 
         return texture;
     }
-
 }
