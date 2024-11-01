@@ -3,7 +3,8 @@ import sys
 import os
 
 def convert_pdf_to_images(pdf_path, output_folder):
-    images = convert_from_path(pdf_path)
+    poppler_path = r"C:\Users\DaWitchBtch\Downloads\Release-24.08.0-0\poppler-24.08.0\Library\bin"
+    images = convert_from_path(pdf_path, poppler_path=poppler_path)
     image_paths = []
     for i, image in enumerate(images):
         image_path = os.path.join(output_folder, f"page_{i + 1}.png")
@@ -16,5 +17,4 @@ if __name__ == "__main__":
     output_folder = sys.argv[2]
     os.makedirs(output_folder, exist_ok=True)
     image_paths = convert_pdf_to_images(pdf_path, output_folder)
-    # Print the image paths to pass back to Unity
-    print("\n".join(image_paths))
+    print("\n".join(image_paths))  # Only print image paths

@@ -23,7 +23,7 @@ public class InstructorToolkit : MonoBehaviour
     private FirebaseFirestore db;
 
     public GameObject slideDisplayPanel; // Assign in the Inspector
-    public string pythonPath = "cmd.exe";
+    public string pythonPath = "C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
 
     void Start()
     {
@@ -129,30 +129,56 @@ public class InstructorToolkit : MonoBehaviour
             }
         });
     }
+    int GetNextLectureNumberFromDirectory()
+    {
+        string imagesPath = Path.Combine(Application.dataPath, "Resources", "Images");
+        if (!Directory.Exists(imagesPath))
+        {
+            Directory.CreateDirectory(imagesPath);
+            return 1;
+        }
+
+        int maxLectureNumber = 0;
+        foreach (string dir in Directory.GetDirectories(imagesPath))
+        {
+            string dirName = Path.GetFileName(dir);
+            if (dirName.StartsWith("Lecture_"))
+            {
+                if (int.TryParse(dirName.Substring("Lecture_".Length), out int lectureNumber))
+                {
+                    maxLectureNumber = Mathf.Max(maxLectureNumber, lectureNumber);
+                }
+            }
+        }
+
+        return maxLectureNumber + 1;
+    }
+
     void AddSlides()
     {
-        UnityDebug.Log("Instructor wants to add slides.");
-
-        string filePath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
-        if (!string.IsNullOrEmpty(filePath))
+        UnityEngine.Debug.Log("Instructor wants to add slides.");
+        int lectureNumber = GetNextLectureNumberFromDirectory();
+        string lectureFolderName = "Lecture_" + lectureNumber;
+        string outputFolder = Path.Combine(Application.dataPath, "Resources", "Images", lectureFolderName);
+        UnityEngine.Debug.Log("Output folder: " + outputFolder);
+        // Create the directory if it doesn't exist
+        if (!Directory.Exists(outputFolder))
         {
-            string lectureName = "Lecture_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            string folderPath = Path.Combine(Application.persistentDataPath, "Images", lectureName);
+            Directory.CreateDirectory(outputFolder);
+        }
 
-            Directory.CreateDirectory(folderPath);
+        // Select PDF and run Python script
+        string pdfPath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
+        List<string> slidePaths = RunPythonScript(pdfPath, outputFolder);
 
-            // Run the Python script to convert the PDF to images
-            List<string> slidePaths = RunPythonScript(filePath, folderPath);
-
-            // Display slides in Unity
-            if (slidePaths != null && slidePaths.Count > 0)
-            {
-                DisplaySlides(slidePaths);
-            }
-            else
-            {
-                UnityDebug.LogError("Failed to generate slides using the Python script.");
-            }
+        // Display slides if any images were generated
+        if (slidePaths != null && slidePaths.Count > 0)
+        {
+            DisplaySlides(slidePaths);
+        }
+        else
+        {
+            UnityEngine.Debug.LogError("Failed to generate slides using the Python script.");
         }
     }
 
@@ -163,32 +189,31 @@ public class InstructorToolkit : MonoBehaviour
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = pythonPath,
-            Arguments = $"/c \"\"C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe\" \"{Application.dataPath}/convert_pdf.py\" \"{pdfPath}\" \"{outputFolder}\"\"",
+            Arguments = $"\"{Application.dataPath}/convert_pdf.py\" \"{pdfPath}\" \"{outputFolder}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
 
-
-        using (Process process = Process.Start(start))
+        using (Process process = Process.Start(startInfo))
         {
             using (StreamReader reader = process.StandardOutput)
             {
-                string result = reader.ReadToEnd();
-                string[] imagePaths = result.Split(new[] { "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
-
-                // Add each path to the slidePaths list
-                foreach (string path in imagePaths)
+                string line;
+                while ((line = reader.ReadLine()) != null)
                 {
-                    slidePaths.Add(path.Trim());
+                    if (File.Exists(line.Trim()))
+                    {
+                        slidePaths.Add(line.Trim());
+                    }
                 }
             }
 
             string error = process.StandardError.ReadToEnd();
             if (!string.IsNullOrEmpty(error))
             {
-                UnityDebug.LogError("Python error: " + error);
+                UnityEngine.Debug.LogError("Python error: " + error);
             }
 
             process.WaitForExit();
