@@ -175,13 +175,39 @@ public class InstructorToolkit : MonoBehaviour
         if (slidePaths != null && slidePaths.Count > 0)
         {
             DisplaySlides(slidePaths);
+            SaveSlidesToFirestore(lectureNumber, slidePaths);
+
         }
         else
         {
             UnityEngine.Debug.LogError("Failed to generate slides using the Python script.");
         }
     }
+    void SaveSlidesToFirestore(int lectureNumber, List<string> slidePaths)
+    {
+        // Create a unique document ID for the lecture
+        string lectureId = "Lecture_" + lectureNumber;
 
+        // Prepare data to save
+        Dictionary<string, object> lectureData = new Dictionary<string, object>
+    {
+        { "lectureNumber", lectureNumber },
+        { "slidePaths", slidePaths } // Saving the list of paths directly
+    };
+
+        // Reference to Firestore and add the document
+        db.Collection("Lectures").Document(lectureId).SetAsync(lectureData).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                UnityEngine.Debug.Log("Lecture " + lectureId + " and slide paths saved successfully in Firestore.");
+            }
+            else
+            {
+                UnityEngine.Debug.LogError("Error saving lecture data to Firestore: " + task.Exception);
+            }
+        });
+    }
     List<string> RunPythonScript(string pdfPath, string outputFolder)
     {
         List<string> slidePaths = new List<string>();
