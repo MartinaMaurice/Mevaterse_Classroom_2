@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 
 public class LectureSelector : MonoBehaviour
 {
-    public TMP_Dropdown lectureDropdown;  // Change to TMP_Dropdown for TextMeshPro
+    public TMP_Dropdown lectureDropdown;  // TMP_Dropdown for TextMeshPro
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
 
     private string imagesBasePath;
@@ -28,7 +27,12 @@ public class LectureSelector : MonoBehaviour
             foreach (string dir in Directory.GetDirectories(imagesBasePath))
             {
                 string dirName = Path.GetFileName(dir);
-                lectureFolders.Add(dirName);
+
+                // Only add directories that start with "Lecture"
+                if (dirName.StartsWith("Lecture"))
+                {
+                    lectureFolders.Add(dirName);
+                }
             }
         }
         else
