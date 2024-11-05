@@ -310,10 +310,10 @@ public class InstructorToolkit : MonoBehaviour
     {
         debuggingPanel.SetActive(false); // Close the debugging panel
 
-        // Determine the next number for the folder (e.g., Assignment_1, Exercise_1, etc.)
+        // Get the next number for the folder (e.g., Assignment_1, Exercise_1)
         int nextNumber = GetNextNumberFromDirectory(type);
         string folderName = $"{type}_{nextNumber}"; // Folder name with type and number
-        string outputFolder = Path.Combine(Application.dataPath, "Resources", type, folderName);
+        string outputFolder = Path.Combine(Application.dataPath, "Resources", "Images", folderName); // Correct path structure
 
         // Create the directory if it doesn't exist
         if (!Directory.Exists(outputFolder))
@@ -330,6 +330,9 @@ public class InstructorToolkit : MonoBehaviour
         {
             DisplaySlides(debuggingPaths);
             SaveDebuggingToFirestore(folderName, debuggingPaths); // Save with the folder name
+
+            // After adding debugging material, return to the initial UI
+            CloseToolkit();
         }
         else
         {
@@ -338,24 +341,26 @@ public class InstructorToolkit : MonoBehaviour
     }
     int GetNextNumberFromDirectory(string type)
     {
-        string basePath = Path.Combine(Application.dataPath, "Resources", type);
-        if (!Directory.Exists(basePath))
-        {
-            Directory.CreateDirectory(basePath);
-            return 1;
-        }
-
+        string basePath = Path.Combine(Application.dataPath, "Resources", "Images");
         int maxNumber = 0;
-        foreach (string dir in Directory.GetDirectories(basePath))
+
+        if (Directory.Exists(basePath))
         {
-            string dirName = Path.GetFileName(dir);
-            if (dirName.StartsWith(type + "_"))
+            foreach (string dir in Directory.GetDirectories(basePath))
             {
-                if (int.TryParse(dirName.Substring((type + "_").Length), out int number))
+                string dirName = Path.GetFileName(dir);
+                if (dirName.StartsWith(type + "_"))
                 {
-                    maxNumber = Mathf.Max(maxNumber, number);
+                    if (int.TryParse(dirName.Substring((type + "_").Length), out int number))
+                    {
+                        maxNumber = Mathf.Max(maxNumber, number);
+                    }
                 }
             }
+        }
+        else
+        {
+            Directory.CreateDirectory(basePath);
         }
 
         return maxNumber + 1;

@@ -8,6 +8,7 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
 {
     private List<Material> slides = new List<Material>();
     private int current = 0;
+    public TabletManager tabletManager;
 
     void Start()
     {

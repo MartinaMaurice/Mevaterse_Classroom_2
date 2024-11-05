@@ -259,7 +259,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   writeSpace: {fileID: 1061279909462140062}
-  isBeingEdited: 0
+  tabletDisplayPanel: {fileID: 0}
 --- !u!114 &3153271840381978638
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -7,11 +7,13 @@ public class LectureSelector : MonoBehaviour
 {
     public TMP_Dropdown lectureDropdown;  // TMP_Dropdown for TextMeshPro
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
+    public TabletManager tabletManager;  // Reference to TabletManager
 
     private string imagesBasePath;
 
     void Start()
     {
+        // Set base path to "Resources/Images" where all folders are stored
         imagesBasePath = Path.Combine(Application.dataPath, "Resources", "Images");
 
         PopulateLectureDropdown();
@@ -19,19 +21,19 @@ public class LectureSelector : MonoBehaviour
 
     void PopulateLectureDropdown()
     {
-        List<string> lectureFolders = new List<string>();
+        List<string> folderNames = new List<string>();
 
-        // Get all lecture folders in the Images directory
+        // Get all folders directly under the Resources/Images directory
         if (Directory.Exists(imagesBasePath))
         {
             foreach (string dir in Directory.GetDirectories(imagesBasePath))
             {
                 string dirName = Path.GetFileName(dir);
 
-                // Only add directories that start with "Lecture"
-                if (dirName.StartsWith("Lecture"))
+                // Add folders that start with Lecture, Assignment, Quiz, or Exercise
+                if (dirName.StartsWith("Lecture") || dirName.StartsWith("Assignment") || dirName.StartsWith("Quiz") || dirName.StartsWith("Exercise"))
                 {
-                    lectureFolders.Add(dirName);
+                    folderNames.Add(dirName);
                 }
             }
         }
@@ -40,9 +42,9 @@ public class LectureSelector : MonoBehaviour
             Debug.LogError("Images base path not found: " + imagesBasePath);
         }
 
-        // Populate dropdown with lecture folder names
+        // Populate dropdown with folder names
         lectureDropdown.ClearOptions();
-        lectureDropdown.AddOptions(lectureFolders);
+        lectureDropdown.AddOptions(folderNames);
 
         // Set the dropdown's value change event
         lectureDropdown.onValueChanged.AddListener(delegate { OnLectureSelected(lectureDropdown); });
@@ -50,10 +52,27 @@ public class LectureSelector : MonoBehaviour
 
     void OnLectureSelected(TMP_Dropdown dropdown)
     {
-        string selectedLecture = dropdown.options[dropdown.value].text;
-        Debug.Log("Selected lecture folder: " + selectedLecture);
+        string selectedFolder = dropdown.options[dropdown.value].text;
+        Debug.Log("Selected folder: " + selectedFolder);
 
-        // Load slides for the selected lecture in BoardController
-        boardController.LoadSlidesForLecture(selectedLecture);
+        // Check if BoardController and TabletManager are assigned
+        if (boardController != null)
+        {
+            boardController.LoadSlidesForLecture(selectedFolder);
+        }
+        else
+        {
+            Debug.LogError("BoardController is not assigned in the Inspector.");
+        }
+
+        if (tabletManager != null)
+        {
+            tabletManager.DisplayContentOnTablet(selectedFolder);
+        }
+        else
+        {
+            Debug.LogError("TabletManager is not assigned in the Inspector.");
+        }
     }
+
 }
