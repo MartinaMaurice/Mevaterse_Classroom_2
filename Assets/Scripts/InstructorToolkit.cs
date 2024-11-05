@@ -18,11 +18,21 @@ public class InstructorToolkit : MonoBehaviour
     public GameObject initialUI;
     public Button addQuizButton;
     public Button addSlidesButton;
-    public Button closeButton;  // Close button to return to initial UI
+    public Button closeButton;
+
+    public Button closeButtonDeb;
+
+    public Button addDebuggingButton;
+
+    public Button assignmentButton;
+
+    public Button exerciseButton;
 
     private FirebaseFirestore db;
 
-    public GameObject slideDisplayPanel; // Assign in the Inspector
+    public GameObject slideDisplayPanel;
+
+    public GameObject debuggingPanel;
     public string pythonPath = "C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
 
     void Start()
@@ -32,7 +42,14 @@ public class InstructorToolkit : MonoBehaviour
 
         addQuizButton.onClick.AddListener(AddQuiz);
         addSlidesButton.onClick.AddListener(AddSlides);
-        closeButton.onClick.AddListener(CloseToolkit);  // Assign the close button listener
+        addDebuggingButton.onClick.AddListener(OpenDebuggingPanel);
+
+        closeButton.onClick.AddListener(CloseToolkit);
+        closeButtonDeb.onClick.AddListener(CloseDebuggingPanel);
+
+
+        assignmentButton.onClick.AddListener(() => AddDebuggingMaterial("Assignment"));
+        exerciseButton.onClick.AddListener(() => AddDebuggingMaterial("Exercise"));
 
         // futureOptionButton.onClick.AddListener(FutureFeature);
     }
@@ -56,6 +73,12 @@ public class InstructorToolkit : MonoBehaviour
         // Hide the toolkit and return to the initial UI
         toolkitPanel.SetActive(false);
         initialUI.SetActive(true);  // Show the initial UI
+    }
+
+    void CloseDebuggingPanel()
+    {
+        debuggingPanel.SetActive(false);
+        toolkitPanel.SetActive(true);
     }
 
     void AddQuiz()
@@ -113,7 +136,7 @@ public class InstructorToolkit : MonoBehaviour
         {
             { "user_id", userId },
             { "quiz_id", quizId },
-            { "name", "New Quiz" },  // You can replace this with quiz name input
+            { "name", "Quiz" },  // You can replace this with quiz name input
             { "material", quizData } // Add the parsed Excel data
         };
 
@@ -277,4 +300,87 @@ public class InstructorToolkit : MonoBehaviour
         return texture;
     }
 
+    void OpenDebuggingPanel()
+    {
+        debuggingPanel.SetActive(true);
+        toolkitPanel.SetActive(false);
+    }
+
+    void AddDebuggingMaterial(string type)
+    {
+        debuggingPanel.SetActive(false); // Close the debugging panel
+
+        // Determine the next number for the folder (e.g., Assignment_1, Exercise_1, etc.)
+        int nextNumber = GetNextNumberFromDirectory(type);
+        string folderName = $"{type}_{nextNumber}"; // Folder name with type and number
+        string outputFolder = Path.Combine(Application.dataPath, "Resources", type, folderName);
+
+        // Create the directory if it doesn't exist
+        if (!Directory.Exists(outputFolder))
+        {
+            Directory.CreateDirectory(outputFolder);
+        }
+
+        // Select PDF and convert
+        string pdfPath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
+        List<string> debuggingPaths = RunPythonScript(pdfPath, outputFolder);
+
+        // Display images and save to Firestore
+        if (debuggingPaths != null && debuggingPaths.Count > 0)
+        {
+            DisplaySlides(debuggingPaths);
+            SaveDebuggingToFirestore(folderName, debuggingPaths); // Save with the folder name
+        }
+        else
+        {
+            UnityDebug.LogError("Failed to generate debugging material using the Python script.");
+        }
+    }
+    int GetNextNumberFromDirectory(string type)
+    {
+        string basePath = Path.Combine(Application.dataPath, "Resources", type);
+        if (!Directory.Exists(basePath))
+        {
+            Directory.CreateDirectory(basePath);
+            return 1;
+        }
+
+        int maxNumber = 0;
+        foreach (string dir in Directory.GetDirectories(basePath))
+        {
+            string dirName = Path.GetFileName(dir);
+            if (dirName.StartsWith(type + "_"))
+            {
+                if (int.TryParse(dirName.Substring((type + "_").Length), out int number))
+                {
+                    maxNumber = Mathf.Max(maxNumber, number);
+                }
+            }
+        }
+
+        return maxNumber + 1;
+    }
+
+    void SaveDebuggingToFirestore(string folderName, List<string> paths)
+    {
+        string docId = folderName; // Use the folder name as the document ID
+
+        Dictionary<string, object> data = new Dictionary<string, object>
+    {
+        { "type", folderName.StartsWith("Assignment") ? "Assignment" : "Exercise" },
+        { "paths", paths }
+    };
+
+        db.Collection("DebuggingMaterials").Document(docId).SetAsync(data).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                UnityDebug.Log($"{folderName} materials saved successfully in Firestore.");
+            }
+            else
+            {
+                UnityDebug.LogError("Error saving debugging materials to Firestore: " + task.Exception);
+            }
+        });
+    }
 }

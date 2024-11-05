@@ -14,6 +14,9 @@ public class RoleHandler : MonoBehaviour
     public GameObject connectButton;
     public GameObject courseCreationUI;
     public GameObject initialUI;
+
+    public GameObject debuggingPanel;
+
     public GameObject toolkitButton;
 
     private FirebaseFirestore db;
@@ -23,8 +26,9 @@ public class RoleHandler : MonoBehaviour
     void Start()
     {
         courseCreationUI.SetActive(false);
-        toolkitButton.SetActive(false); // Hide toolkit button initially
+        toolkitButton.SetActive(false); 
 
+        debuggingPanel.SetActive(false);  
         roleDropdown.value = 0;  // Assuming 0 is Instructor and 1 is Student
         selectedRole = "Student";  // Default to student
 
