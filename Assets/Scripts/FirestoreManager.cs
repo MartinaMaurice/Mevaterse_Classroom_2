@@ -105,3 +105,4 @@ public class FirestoreManager : MonoBehaviour
         return availableCourses.Contains(courseId);
     }
 }
+ 
