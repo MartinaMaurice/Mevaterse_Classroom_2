@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using TMPro;
+using Firebase.Firestore;
+using System.Threading.Tasks;
 
 public class LectureSelector : MonoBehaviour
 {
@@ -9,17 +11,38 @@ public class LectureSelector : MonoBehaviour
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
     public TabletManager tabletManager;  // Reference to TabletManager
 
+    private FirebaseFirestore db;
     private string imagesBasePath;
 
     void Start()
     {
-        // Set base path to "Resources/Images" where all folders are stored
+        db = FirebaseFirestore.DefaultInstance;
         imagesBasePath = Path.Combine(Application.dataPath, "Resources", "Images");
-
         PopulateLectureDropdown();
     }
 
-    void PopulateLectureDropdown()
+    async void PopulateLectureDropdown()
+    {
+        // Fetch folder names from local directory
+        List<string> localFolderNames = GetLocalFolderNames();
+
+        // Fetch quiz titles from Firestore
+        List<string> firestoreQuizTitles = await FetchQuizTitlesFromFirestore();
+
+        // Combine both lists
+        List<string> combinedOptions = new List<string>();
+        combinedOptions.AddRange(localFolderNames);  // Local folders
+        combinedOptions.AddRange(firestoreQuizTitles);  // Firestore quizzes
+
+        // Populate dropdown with combined options
+        lectureDropdown.ClearOptions();
+        lectureDropdown.AddOptions(combinedOptions);
+
+        // Set the dropdown's value change event
+        lectureDropdown.onValueChanged.AddListener(delegate { OnLectureSelected(lectureDropdown); });
+    }
+
+    List<string> GetLocalFolderNames()
     {
         List<string> folderNames = new List<string>();
 
@@ -42,37 +65,61 @@ public class LectureSelector : MonoBehaviour
             Debug.LogError("Images base path not found: " + imagesBasePath);
         }
 
-        // Populate dropdown with folder names
-        lectureDropdown.ClearOptions();
-        lectureDropdown.AddOptions(folderNames);
-
-        // Set the dropdown's value change event
-        lectureDropdown.onValueChanged.AddListener(delegate { OnLectureSelected(lectureDropdown); });
+        return folderNames;
     }
 
-    void OnLectureSelected(TMP_Dropdown dropdown)
+    async Task<List<string>> FetchQuizTitlesFromFirestore()
     {
-        string selectedFolder = dropdown.options[dropdown.value].text;
-        Debug.Log("Selected folder: " + selectedFolder);
+        List<string> quizTitles = new List<string>();
 
-        // Check if BoardController and TabletManager are assigned
+        // Fetch quizzes from Firestore
+        QuerySnapshot quizSnapshot = await db.Collection("quizzes").GetSnapshotAsync();
+
+        int quizNumber = 1;
+        foreach (DocumentSnapshot document in quizSnapshot.Documents)
+        {
+            if (document.Exists)
+            {
+                string quizTitle = $"Quiz {quizNumber}: {document.Id}";  // You can use another field as the title if available
+                quizTitles.Add(quizTitle);
+                quizNumber++;
+            }
+        }
+
+        return quizTitles;
+    }
+
+void OnLectureSelected(TMP_Dropdown dropdown)
+{
+    string selectedItem = dropdown.options[dropdown.value].text;
+    Debug.Log("Selected item: " + selectedItem);
+
+    if (selectedItem.StartsWith("Quiz"))
+    {
+        // Extract the quiz ID from the selected item string
+        string[] parts = selectedItem.Split(':');
+        if (parts.Length > 1)
+        {
+            string quizId = parts[1].Trim();  // Trim any whitespace around the quiz ID
+            tabletManager.SetQuizId(quizId);  // Set the quiz ID in TabletManager
+            Debug.Log("Quiz ID for selected item: " + quizId);
+        }
+        else
+        {
+            Debug.LogError("Failed to extract quiz ID from selected item: " + selectedItem);
+        }
+    }
+    else
+    {
+        // Local folder (Lecture, Assignment, etc.) selected
         if (boardController != null)
         {
-            boardController.LoadSlidesForLecture(selectedFolder);
+            boardController.LoadSlidesForLecture(selectedItem);
         }
         else
         {
             Debug.LogError("BoardController is not assigned in the Inspector.");
         }
-
-        if (tabletManager != null)
-        {
-            tabletManager.DisplayContentOnTablet(selectedFolder);
-        }
-        else
-        {
-            Debug.LogError("TabletManager is not assigned in the Inspector.");
-        }
     }
-
+}
 }

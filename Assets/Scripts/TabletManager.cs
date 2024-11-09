@@ -1,98 +1,245 @@
-using UnityEngine;
-using TMPro;
-using UnityEngine.EventSystems;
-using Photon.Pun;
-using System;
 using System.Collections.Generic;
-using System.IO;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using Firebase.Firestore;
+using Firebase.Extensions;
 
-public class TabletManager : MonoBehaviourPunCallbacks
+public class TabletManager : MonoBehaviour
 {
-    public TMP_InputField writeSpace;
-    public GameObject displayPanel; // Panel to display lecture content on the tablet
-    private GameObject commandInfo;
-    private TextChat textChat;
+    [SerializeField] private TMP_InputField userIDInputField;
+    [SerializeField] private GameObject userIDPanel;
+    [SerializeField] private GameObject quizPanel;
 
-    private bool isBeingEdited;
+    [SerializeField] private TextMeshProUGUI questionText;
+    [SerializeField] private Button[] answerButtons;
+    [SerializeField] private TextMeshProUGUI scoreText; // Text element to display the final score
+    [SerializeField] private Button submitButton; // Reference to the submit button
 
-    private void Start()
+    private FirebaseFirestore db;
+    private string userId;
+    private List<Dictionary<string, object>> questions;
+    private int currentQuestionIndex = 0;
+    private int score = 0; // Tracks the score/grade
+    private string selectedQuizId;
+
+    void Start()
     {
-        writeSpace.readOnly = true;
-        isBeingEdited = false;
-        commandInfo = GameObject.Find("CommandInfo");
-
-        writeSpace.text = $"{PhotonNetwork.NickName}'s notes, {DateTime.UtcNow.Date:MM/dd/yyyy}";
-        writeSpace.caretPosition = writeSpace.text.Length;
-
-        textChat = GameObject.Find("TextChat").GetComponent<TextChat>();
+        db = FirebaseFirestore.DefaultInstance;
+        quizPanel.SetActive(false);
+        userIDPanel.SetActive(true);
+        scoreText.gameObject.SetActive(false); // Hide score text initially
     }
 
-    void LateUpdate()
+    public void SetQuizId(string quizId)
     {
-        if (Input.GetKeyUp(KeyCode.Space) && !isBeingEdited && !textChat.isSelected)
+        selectedQuizId = quizId;
+    }
+
+    public void OnUserIDSubmit()
+    {
+        userId = userIDInputField.text;
+        if (!string.IsNullOrEmpty(userId))
         {
-            writeSpace.readOnly = false;
-            EventSystem.current.SetSelectedGameObject(writeSpace.gameObject);
-            Cursor.lockState = CursorLockMode.None;
-            writeSpace.caretPosition = writeSpace.text.Length;
-            commandInfo.SetActive(false);
-            isBeingEdited = true;
+            ValidateUserID(userId);
         }
-        else if (Input.GetKeyUp(KeyCode.Escape) && isBeingEdited)
+        else
         {
-            writeSpace.readOnly = true;
-            EventSystem.current.SetSelectedGameObject(null);
-            Cursor.lockState = CursorLockMode.Locked;
-            LogManager.Instance.SaveNotes(writeSpace.text);
-            commandInfo.SetActive(true);
-            isBeingEdited = false;
+            Debug.LogError("User ID cannot be empty.");
         }
     }
 
-    public void DisplayContentOnTablet(string folderName)
+    void ValidateUserID(string userId)
     {
-        if (displayPanel == null)
+        db.Collection("users").Document(userId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            Debug.LogError("DisplayPanel is not assigned in the Inspector.");
+            if (task.IsCompleted && task.Result.Exists)
+            {
+                Debug.Log("User exists. Loading quiz...");
+                userIDPanel.SetActive(false);
+                quizPanel.SetActive(true);
+                LoadQuizFromFirestore(selectedQuizId);
+            }
+            else
+            {
+                Debug.LogError("User does not exist. Please enter a valid user ID.");
+            }
+        });
+    }
+
+    void LoadQuizFromFirestore(string quizId)
+    {
+        if (string.IsNullOrEmpty(quizId))
+        {
+            Debug.LogError("Quiz ID is not set. Cannot load quiz.");
             return;
         }
 
-        // Clear previous content on the displayPanel (if any)
-        foreach (Transform child in displayPanel.transform)
+        db.Collection("quizzes").Document(quizId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            Destroy(child.gameObject);
-        }
-
-        // Load images from the selected folder
-        string folderPath = Path.Combine(Application.dataPath, "Resources", "Images", folderName);
-        if (Directory.Exists(folderPath))
-        {
-            foreach (string imagePath in Directory.GetFiles(folderPath, "*.png"))
+            if (task.IsCompleted && task.Result.Exists)
             {
-                Texture2D texture = LoadImage(imagePath);
-                if (texture != null)
+                var quizData = task.Result.ToDictionary();
+                questions = new List<Dictionary<string, object>>();
+
+                if (quizData.ContainsKey("material"))
                 {
-                    GameObject imageObject = new GameObject("SlideImage");
-                    imageObject.transform.SetParent(displayPanel.transform);
-                    var imageComponent = imageObject.AddComponent<UnityEngine.UI.RawImage>();
-                    imageComponent.texture = texture;
+                    var material = quizData["material"] as List<object>;
+                    foreach (var item in material)
+                    {
+                        questions.Add(item as Dictionary<string, object>);
+                    }
+
+                    currentQuestionIndex = 0;
+                    DisplayQuestion(currentQuestionIndex);
+                    Debug.Log("Quiz loaded successfully.");
                 }
+                else
+                {
+                    Debug.LogError("No 'material' field found in the quiz document.");
+                }
+            }
+            else
+            {
+                Debug.LogError("Quiz not found or error retrieving quiz.");
+            }
+        });
+    }
+
+    void DisplayQuestion(int questionIndex)
+    {
+        if (questionIndex < questions.Count)
+        {
+            var questionData = questions[questionIndex];
+
+            if (questionData.TryGetValue("question", out var questionTextValue))
+            {
+                questionText.text = questionTextValue.ToString();
+            }
+
+            if (questionData.TryGetValue("choices", out var choicesValue) && choicesValue is List<object> choices)
+            {
+                for (int i = 0; i < answerButtons.Length; i++)
+                {
+                    if (i < choices.Count)
+                    {
+                        var answerTextTMP = answerButtons[i].GetComponentInChildren<TextMeshProUGUI>();
+                        answerTextTMP.text = choices[i].ToString();
+                        answerButtons[i].gameObject.SetActive(true); // Show the button
+                    }
+                    else
+                    {
+                        answerButtons[i].gameObject.SetActive(false); // Hide unused buttons
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogError("Choices not found or are not in the expected format.");
             }
         }
         else
         {
-            Debug.LogError("Folder not found: " + folderPath);
+            EndQuiz(); // End the quiz when all questions are answered
         }
     }
 
-    private Texture2D LoadImage(string filePath)
+    public void OnAnswerSelected(int selectedAnswerIndex)
     {
-        byte[] fileData = File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2);
-        if (texture.LoadImage(fileData))
+        if (questions == null || currentQuestionIndex >= questions.Count)
         {
-            return texture;
+            Debug.LogError("Questions data is not loaded or question index is out of range.");
+            return;
         }
-        return null;
+
+        var questionData = questions[currentQuestionIndex];
+
+        // Check if the selected answer is correct
+        if (questionData.TryGetValue("answer", out var correctAnswer))
+        {
+            var selectedAnswerText = answerButtons[selectedAnswerIndex].GetComponentInChildren<TextMeshProUGUI>().text;
+            if (selectedAnswerText == correctAnswer.ToString())
+            {
+                Debug.Log("Correct Answer");
+                score++; // Increment score if correct
+            }
+            else
+            {
+                Debug.Log("Incorrect Answer");
+            }
+        }
+        else
+        {
+            Debug.LogError("Correct answer not found in question data.");
+        }
+
+        // Move to the next question
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.Count)
+        {
+            DisplayQuestion(currentQuestionIndex);
+        }
+        else
+        {
+            EndQuiz();
+        }
+    }
+
+    void EndQuiz()
+    {
+        // Hide all answer buttons
+        foreach (var button in answerButtons)
+        {
+            button.gameObject.SetActive(false);
+        }
+
+        // Display the final score
+        scoreText.gameObject.SetActive(true);
+        scoreText.text = "Your Score: " + score;
+        questionText.text = "Quiz is done";
+        // Change submit button to exit button
+        submitButton.GetComponentInChildren<TextMeshProUGUI>().text = "Exit";
+        submitButton.onClick.RemoveAllListeners();
+        submitButton.onClick.AddListener(ExitQuiz);
+
+        SaveQuizResults(); // Save the quiz results to Firestore
+    }
+
+    void ExitQuiz()
+    {
+        quizPanel.SetActive(false);  // Hide quiz panel
+        userIDPanel.SetActive(true); // Show user ID panel
+        scoreText.gameObject.SetActive(false); // Hide the score text
+
+        // Reset for a new quiz
+        currentQuestionIndex = 0;
+        score = 0;
+
+        // Reset submit button for the next quiz
+        submitButton.GetComponentInChildren<TextMeshProUGUI>().text = "Submit";
+        submitButton.onClick.RemoveAllListeners();
+        submitButton.onClick.AddListener(() => Debug.Log("Please select an answer.")); // Placeholder until answer is selected
+    }
+
+    void SaveQuizResults()
+    {
+        Dictionary<string, object> resultData = new Dictionary<string, object>
+        {
+            { "quiz_id", selectedQuizId },
+            { "quiz_completed", true },
+            { "score", score } // Save the final score
+        };
+
+        db.Collection("users").Document(userId).Collection("quiz_results").Document(selectedQuizId).SetAsync(resultData, SetOptions.MergeAll).ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted)
+            {
+                Debug.Log("Quiz results successfully saved for user.");
+            }
+            else
+            {
+                Debug.LogError("Error saving quiz results: " + task.Exception);
+            }
+        });
     }
 }
