@@ -14,6 +14,10 @@ public class LectureSelector : MonoBehaviour
     private FirebaseFirestore db;
     private string imagesBasePath;
 
+    // Lists to store quiz display names and IDs
+    private List<string> quizTitles = new List<string>();
+    private List<string> quizIds = new List<string>();
+
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -27,12 +31,12 @@ public class LectureSelector : MonoBehaviour
         List<string> localFolderNames = GetLocalFolderNames();
 
         // Fetch quiz titles from Firestore
-        List<string> firestoreQuizTitles = await FetchQuizTitlesFromFirestore();
+        await FetchQuizTitlesFromFirestore();
 
         // Combine both lists
         List<string> combinedOptions = new List<string>();
         combinedOptions.AddRange(localFolderNames);  // Local folders
-        combinedOptions.AddRange(firestoreQuizTitles);  // Firestore quizzes
+        combinedOptions.AddRange(quizTitles);  // Firestore quizzes (only display titles)
 
         // Populate dropdown with combined options
         lectureDropdown.ClearOptions();
@@ -68,11 +72,8 @@ public class LectureSelector : MonoBehaviour
         return folderNames;
     }
 
-    async Task<List<string>> FetchQuizTitlesFromFirestore()
+    async Task FetchQuizTitlesFromFirestore()
     {
-        List<string> quizTitles = new List<string>();
-        List<string> quizIds = new List<string>();
-
         // Fetch quizzes from Firestore
         QuerySnapshot quizSnapshot = await db.Collection("quizzes").GetSnapshotAsync();
 
@@ -81,20 +82,23 @@ public class LectureSelector : MonoBehaviour
         {
             if (document.Exists)
             {
-                string quizTitle = $"Quiz {quizNumber}";  // You can use another field as the title if available
+                // Create a user-friendly title for display in the dropdown
+                string quizTitle = $"Quiz {quizNumber}";
+
+                // Add title and ID to separate lists
                 quizTitles.Add(quizTitle);
                 quizIds.Add(document.Id);
 
                 quizNumber++;
             }
         }
-
-        return quizTitles;
     }
 
     void OnLectureSelected(TMP_Dropdown dropdown)
     {
         string selectedItem = dropdown.options[dropdown.value].text;
+        int selectedIndex = dropdown.value;
+
         Debug.Log("Selected item: " + selectedItem);
 
         if (selectedItem.StartsWith("Quiz"))
@@ -118,21 +122,18 @@ public class LectureSelector : MonoBehaviour
         {
             tabletManager.SetLectureType("Exercise"); // Set lecture type as "Exercise"
             boardController.LoadSlidesForLecture(selectedItem);
-
             Debug.Log("Exercise selected.");
         }
         else if (selectedItem.StartsWith("Assignment"))
         {
             tabletManager.SetLectureType("Assignment"); // Set lecture type as "Assignment"
             boardController.LoadSlidesForLecture(selectedItem);
-
             Debug.Log("Assignment selected.");
         }
         else if (selectedItem.StartsWith("Lecture"))
         {
             tabletManager.SetLectureType("Lecture"); // Set lecture type as "Lecture"
             boardController.LoadSlidesForLecture(selectedItem);
-
             Debug.Log("Lecture selected.");
         }
         else
