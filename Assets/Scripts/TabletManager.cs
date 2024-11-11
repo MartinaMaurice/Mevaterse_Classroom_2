@@ -10,7 +10,11 @@ public class TabletManager : MonoBehaviour
     [SerializeField] private TMP_InputField userIDInputField;
     [SerializeField] private GameObject userIDPanel;
     [SerializeField] private GameObject quizPanel;
-
+    [SerializeField] private GameObject IDEPanel;
+    [SerializeField] private GameObject selectionPanel; // Panel with IDE and Quiz buttons
+    [SerializeField] private Button IDEButton;
+    [SerializeField] private Button QuizButton;
+    [SerializeField] private Button CloseButton;
     [SerializeField] private TextMeshProUGUI questionText;
     [SerializeField] private Button[] answerButtons;
     [SerializeField] private TextMeshProUGUI scoreText; // Text element to display the final score
@@ -22,6 +26,7 @@ public class TabletManager : MonoBehaviour
     private int currentQuestionIndex = 0;
     private int score = 0; // Tracks the score/grade
     private string selectedQuizId;
+    private string selectedLectureType; // Stores if selection is "Quiz" or "Exercise"
 
     void Start()
     {
@@ -29,11 +34,32 @@ public class TabletManager : MonoBehaviour
         quizPanel.SetActive(false);
         userIDPanel.SetActive(true);
         scoreText.gameObject.SetActive(false); // Hide score text initially
+        IDEPanel.SetActive(false);
+        selectionPanel.SetActive(false);
+
+        // Set up button listeners
+        IDEButton.onClick.AddListener(OpenIDE);
+        QuizButton.onClick.AddListener(OpenQuiz);
+        CloseButton.onClick.AddListener(ClosePanel);
+    }
+    public string UserId
+    {
+        get { return userId; }
     }
 
+    public void ClosePanel()
+    {
+        selectionPanel.SetActive(false);
+        userIDPanel.SetActive(true);
+    }
     public void SetQuizId(string quizId)
     {
         selectedQuizId = quizId;
+    }
+
+    public void SetLectureType(string type)
+    {
+        selectedLectureType = type;
     }
 
     public void OnUserIDSubmit()
@@ -55,16 +81,45 @@ public class TabletManager : MonoBehaviour
         {
             if (task.IsCompleted && task.Result.Exists)
             {
-                Debug.Log("User exists. Loading quiz...");
+                Debug.Log("User exists.");
                 userIDPanel.SetActive(false);
-                quizPanel.SetActive(true);
-                LoadQuizFromFirestore(selectedQuizId);
+                selectionPanel.SetActive(true); // Show selection panel after validating user
             }
             else
             {
                 Debug.LogError("User does not exist. Please enter a valid user ID.");
             }
         });
+    }
+    void OpenIDE()
+    {
+        if (selectedLectureType == "Exercise")
+        {
+            selectionPanel.SetActive(false);
+            IDEPanel.SetActive(true);
+            quizPanel.SetActive(false);
+            Debug.Log("IDE Panel opened.");
+        }
+        else
+        {
+            Debug.LogError("Please select an exercise from the dropdown to open the IDE.");
+        }
+    }
+
+    void OpenQuiz()
+    {
+        if (selectedLectureType == "Quiz")
+        {
+            selectionPanel.SetActive(false);
+            quizPanel.SetActive(true);
+            IDEPanel.SetActive(false);
+            LoadQuizFromFirestore(selectedQuizId);
+            Debug.Log("Quiz Panel opened.");
+        }
+        else
+        {
+            Debug.LogError("Please select a quiz from the dropdown to open the Quiz.");
+        }
     }
 
     void LoadQuizFromFirestore(string quizId)

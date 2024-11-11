@@ -71,6 +71,7 @@ public class LectureSelector : MonoBehaviour
     async Task<List<string>> FetchQuizTitlesFromFirestore()
     {
         List<string> quizTitles = new List<string>();
+        List<string> quizIds = new List<string>();
 
         // Fetch quizzes from Firestore
         QuerySnapshot quizSnapshot = await db.Collection("quizzes").GetSnapshotAsync();
@@ -80,8 +81,10 @@ public class LectureSelector : MonoBehaviour
         {
             if (document.Exists)
             {
-                string quizTitle = $"Quiz {quizNumber}: {document.Id}";  // You can use another field as the title if available
+                string quizTitle = $"Quiz {quizNumber}";  // You can use another field as the title if available
                 quizTitles.Add(quizTitle);
+                quizIds.Add(document.Id);
+
                 quizNumber++;
             }
         }
@@ -89,37 +92,60 @@ public class LectureSelector : MonoBehaviour
         return quizTitles;
     }
 
-void OnLectureSelected(TMP_Dropdown dropdown)
-{
-    string selectedItem = dropdown.options[dropdown.value].text;
-    Debug.Log("Selected item: " + selectedItem);
+    void OnLectureSelected(TMP_Dropdown dropdown)
+    {
+        string selectedItem = dropdown.options[dropdown.value].text;
+        Debug.Log("Selected item: " + selectedItem);
 
-    if (selectedItem.StartsWith("Quiz"))
-    {
-        // Extract the quiz ID from the selected item string
-        string[] parts = selectedItem.Split(':');
-        if (parts.Length > 1)
+        if (selectedItem.StartsWith("Quiz"))
         {
-            string quizId = parts[1].Trim();  // Trim any whitespace around the quiz ID
-            tabletManager.SetQuizId(quizId);  // Set the quiz ID in TabletManager
-            Debug.Log("Quiz ID for selected item: " + quizId);
+            // Use the index to retrieve the corresponding quiz ID
+            int quizIndex = selectedIndex - (lectureDropdown.options.Count - quizTitles.Count);
+            if (quizIndex >= 0 && quizIndex < quizIds.Count)
+            {
+                string quizId = quizIds[quizIndex];
+                tabletManager.SetQuizId(quizId);  // Set the quiz ID in TabletManager
+                tabletManager.SetLectureType("Quiz"); // Set lecture type as "Quiz"
+
+                Debug.Log("Quiz ID for selected item: " + quizId);
+            }
+            else
+            {
+                Debug.LogError("Quiz ID not found for selected item: " + selectedItem);
+            }
         }
-        else
+        else if (selectedItem.StartsWith("Exercise"))
         {
-            Debug.LogError("Failed to extract quiz ID from selected item: " + selectedItem);
-        }
-    }
-    else
-    {
-        // Local folder (Lecture, Assignment, etc.) selected
-        if (boardController != null)
-        {
+            tabletManager.SetLectureType("Exercise"); // Set lecture type as "Exercise"
             boardController.LoadSlidesForLecture(selectedItem);
+
+            Debug.Log("Exercise selected.");
+        }
+        else if (selectedItem.StartsWith("Assignment"))
+        {
+            tabletManager.SetLectureType("Assignment"); // Set lecture type as "Assignment"
+            boardController.LoadSlidesForLecture(selectedItem);
+
+            Debug.Log("Assignment selected.");
+        }
+        else if (selectedItem.StartsWith("Lecture"))
+        {
+            tabletManager.SetLectureType("Lecture"); // Set lecture type as "Lecture"
+            boardController.LoadSlidesForLecture(selectedItem);
+
+            Debug.Log("Lecture selected.");
         }
         else
         {
-            Debug.LogError("BoardController is not assigned in the Inspector.");
+            // Local folder (Lecture, Assignment, etc.) selected
+            if (boardController != null)
+            {
+                boardController.LoadSlidesForLecture(selectedItem);
+            }
+            else
+            {
+                Debug.LogError("BoardController is not assigned in the Inspector.");
+            }
         }
     }
-}
 }
