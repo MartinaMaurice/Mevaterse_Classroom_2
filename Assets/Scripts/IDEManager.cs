@@ -18,7 +18,7 @@ public class IDEManager : MonoBehaviour
     private FirebaseFirestore db;
     public TabletManager tabletManager;
 
-    private string serverUrl = "http://192.168.100.206:5000/run";
+    private string serverUrl = "http://192.168.100.137:5000/run";
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -62,7 +62,7 @@ public class IDEManager : MonoBehaviour
     }
     private void OnSubmitCode()
     {
-        Debug.Log("Attempting to submit code to Firestore."); // Check if this line is reached
+        Debug.Log("Attempting to submit code to Firestore.");
 
         if (tabletManager == null || string.IsNullOrEmpty(tabletManager.UserId))
         {
@@ -76,13 +76,17 @@ public class IDEManager : MonoBehaviour
 
         Debug.Log("Code and output ready for submission. User ID: " + userId);
 
+        // You could use a unique identifier or incrementing ID for each exercise, e.g., Exercise1, Exercise2, etc.
+        string exerciseNumber = "Exercise1"; // Update this as needed for dynamic naming or pass it as a parameter
+
         Dictionary<string, object> codeData = new Dictionary<string, object>
     {
         { "code", userCode },
         { "output", codeOutput }
     };
 
-        db.Collection("users").Document(userId).Collection("exercises").Document("ExerciseName")
+        // Set the code data to the specified exercise number under the "exercises" collection
+        db.Collection("users").Document(userId).Collection("exercises").Document(exerciseNumber)
             .SetAsync(codeData, SetOptions.MergeAll)
             .ContinueWithOnMainThread(task =>
             {
@@ -96,5 +100,4 @@ public class IDEManager : MonoBehaviour
                 }
             });
     }
-
 }
