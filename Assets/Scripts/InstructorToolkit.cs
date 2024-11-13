@@ -53,7 +53,7 @@ public class InstructorToolkit : MonoBehaviour
         exerciseButton.onClick.AddListener(() => AddDebuggingMaterial("Exercise"));
 
         // futureOptionButton.onClick.AddListener(FutureFeature);
-         addUserButton.onClick.AddListener(AddUsersFromExcel);
+        addUserButton.onClick.AddListener(AddUsersFromExcel);
     }
 
     public void ToggleToolkit()
@@ -390,10 +390,10 @@ public class InstructorToolkit : MonoBehaviour
             }
         });
     }
-   void AddUsersFromExcel()
+    void AddUsersFromExcel()
     {
         string filePath = StandaloneFileBrowser.OpenFilePanel("Select User Excel File", "", "xlsx", false)[0];
-        
+
         if (!string.IsNullOrEmpty(filePath))
         {
             List<Dictionary<string, object>> userData = ReadUserExcelFile(filePath);
@@ -418,7 +418,8 @@ public class InstructorToolkit : MonoBehaviour
                     {
                         { "name", reader.GetValue(0)?.ToString() },
                         { "id", reader.GetValue(1)?.ToString() },
-                        { "course_id", reader.GetValue(2)?.ToString() }
+                        { "course_id", reader.GetValue(2)?.ToString() },
+                        {"role", reader.GetValue(3)?.ToString() }
                     };
                     userData.Add(userEntry);
                 }
