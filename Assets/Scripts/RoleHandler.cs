@@ -1,6 +1,6 @@
 using UnityEngine;
-using TMPro;  // For handling TextMeshPro inputs.
-using Photon.Pun;  // Include Photon namespace to access PhotonNetwork.
+using TMPro;
+using Photon.Pun;
 using Firebase.Firestore;
 using Firebase.Extensions;
 using System.Collections.Generic;
@@ -10,24 +10,23 @@ public class RoleHandler : MonoBehaviour
     public TMP_Dropdown roleDropdown;
     public TMP_InputField playerNameInput;
     public TMP_InputField roomNameInput;
+    public TMP_InputField userIdInput;      // User ID input field for validation
+    public TMP_InputField courseIdInput;    // Course ID input field for validation
 
     public GameObject connectButton;
     public GameObject courseCreationUI;
     public GameObject initialUI;
 
     public GameObject debuggingPanel;
-
     public GameObject toolkitButton;
 
     private FirebaseFirestore db;
     private string selectedRole;
-    private string userId;
 
     void Start()
     {
         courseCreationUI.SetActive(false);
         toolkitButton.SetActive(false); 
-
         debuggingPanel.SetActive(false);  
         roleDropdown.value = 0;  // Assuming 0 is Instructor and 1 is Student
         selectedRole = "Student";  // Default to student
@@ -54,29 +53,21 @@ public class RoleHandler : MonoBehaviour
         }
     }
 
-    // This function is called when the "Select Role" button is clicked
-    public void OnSelectRoleClicked()
-    {
-        string playerName = playerNameInput.text;
-
-        // Ensure that player name and role are not empty
-        if (string.IsNullOrEmpty(playerName) || string.IsNullOrEmpty(selectedRole))
-        {
-            Debug.LogError("Player name and role must be selected.");
-            return;
-        }
-
-        // Save the user to Firestore when the "Select Role" button is clicked
-        userId = db.Collection("users").Document().Id;
-        SaveUserToFirestore(playerName, selectedRole);
-    }
-
+    // This function is called when the "Connect" button is clicked
     public void OnConnectClicked()
     {
         string playerName = playerNameInput.text;
         string roomName = roomNameInput.text;
+        string userId = userIdInput.text;
+        string courseId = courseIdInput.text;
 
         PhotonNetwork.NickName = playerName;
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(courseId))
+        {
+            Debug.LogError("User ID and Course ID cannot be empty.");
+            return;
+        }
 
         if (selectedRole == "Instructor")
         {
@@ -94,17 +85,18 @@ public class RoleHandler : MonoBehaviour
         {
             if (PhotonNetwork.IsConnected)
             {
-                // Check if the course exists in Firestore before attempting to join
-                CheckCourseExistsInFirestore(roomName, exists =>
+                // Validate if the student has access to the specified course
+                ValidateUserAccess(userId, courseId, isValid =>
                 {
-                    if (exists)
+                    if (isValid)
                     {
-                        Debug.Log($"Course with ID {roomName} found. Attempting to join room.");
+                        Debug.Log("User validated for the course. Proceeding to connect.");
+                        // Attempt to join the specified room
                         FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
                     }
                     else
                     {
-                        Debug.LogError("Course not found in Firestore. Please check the Course ID.");
+                        Debug.LogError("User does not have access to the course.");
                     }
                 });
             }
@@ -114,55 +106,29 @@ public class RoleHandler : MonoBehaviour
             }
         }
     }
-    private void CheckCourseExistsInFirestore(string courseId, System.Action<bool> callback)
-    {
-        Debug.Log($"Attempting to find course with ID: {courseId}");
 
-        db.Collection("Courses").Document(courseId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    // Check if the user has access to a specific course
+    private void ValidateUserAccess(string userId, string courseId, System.Action<bool> callback)
+    {
+        db.Collection("users").Document(userId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted)
             {
                 DocumentSnapshot snapshot = task.Result;
-                if (snapshot.Exists)
+                if (snapshot.Exists && snapshot.ContainsField("course_id"))
                 {
-                    Debug.Log("Course found in Firestore.");
-                    callback(true); // Course exists
+                    string storedCourseId = snapshot.GetValue<string>("course_id");
+                    callback(storedCourseId == courseId);
                 }
                 else
                 {
-                    Debug.LogWarning("Course does not exist in Firestore.");
-                    callback(false); // Course does not exist
+                    callback(false);
                 }
             }
             else
             {
-                Debug.LogError("Failed to check course in Firestore: " + task.Exception);
+                Debug.LogError("Failed to validate user access: " + task.Exception);
                 callback(false);
-            }
-        });
-    }
-
-
-    // Function to save the user information to Firestore
-    void SaveUserToFirestore(string name, string role)
-    {
-        Dictionary<string, object> userDoc = new Dictionary<string, object>
-        {
-            { "name", name },
-            { "role", role },
-            { "id", userId }
-        };
-
-        db.Collection("users").Document(userId).SetAsync(userDoc).ContinueWithOnMainThread(task =>
-        {
-            if (task.IsCompleted)
-            {
-                Debug.Log("User successfully added to Firestore.");
-                PlayerPrefs.SetString("UserID", userId); // Save user ID locally for future use
-            }
-            else
-            {
-                Debug.LogError("Error adding user: " + task.Exception);
             }
         });
     }

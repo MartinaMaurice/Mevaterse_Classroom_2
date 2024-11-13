@@ -14,6 +14,7 @@ using ExcelDataReader;
 public class InstructorToolkit : MonoBehaviour
 {
     public GameObject toolkitPanel;
+    public Button addUserButton;  // New button for adding users from Excel
 
     public GameObject initialUI;
     public Button addQuizButton;
@@ -52,6 +53,7 @@ public class InstructorToolkit : MonoBehaviour
         exerciseButton.onClick.AddListener(() => AddDebuggingMaterial("Exercise"));
 
         // futureOptionButton.onClick.AddListener(FutureFeature);
+         addUserButton.onClick.AddListener(AddUsersFromExcel);
     }
 
     public void ToggleToolkit()
@@ -387,5 +389,61 @@ public class InstructorToolkit : MonoBehaviour
                 UnityDebug.LogError("Error saving debugging materials to Firestore: " + task.Exception);
             }
         });
+    }
+   void AddUsersFromExcel()
+    {
+        string filePath = StandaloneFileBrowser.OpenFilePanel("Select User Excel File", "", "xlsx", false)[0];
+        
+        if (!string.IsNullOrEmpty(filePath))
+        {
+            List<Dictionary<string, object>> userData = ReadUserExcelFile(filePath);
+            SaveUsersToFirestore(userData);
+        }
+    }
+
+    // Reads user data from the selected Excel file
+    List<Dictionary<string, object>> ReadUserExcelFile(string filePath)
+    {
+        List<Dictionary<string, object>> userData = new List<Dictionary<string, object>>();
+
+        using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+        {
+            using (var reader = ExcelReaderFactory.CreateReader(stream))
+            {
+                // Skip header row
+                reader.Read();
+                while (reader.Read())
+                {
+                    var userEntry = new Dictionary<string, object>
+                    {
+                        { "name", reader.GetValue(0)?.ToString() },
+                        { "id", reader.GetValue(1)?.ToString() },
+                        { "course_id", reader.GetValue(2)?.ToString() }
+                    };
+                    userData.Add(userEntry);
+                }
+            }
+        }
+        return userData;
+    }
+
+    // Saves the parsed user data to Firestore
+    void SaveUsersToFirestore(List<Dictionary<string, object>> userData)
+    {
+        foreach (var user in userData)
+        {
+            string userId = user["id"].ToString();
+            db.Collection("users").Document(userId).SetAsync(user, SetOptions.MergeAll).ContinueWithOnMainThread(task =>
+            {
+                if (task.IsCompleted)
+                {
+                    UnityEngine.Debug.Log("User successfully added to Firestore: " + userId);
+                }
+                else
+                {
+                    UnityEngine.Debug.LogError("Error adding user: " + task.Exception);
+                }
+            });
+        }
     }
 }
