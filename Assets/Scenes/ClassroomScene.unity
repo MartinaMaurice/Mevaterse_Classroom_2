@@ -10937,6 +10937,7 @@ MonoBehaviour:
   runButton: {fileID: 1788208331}
   submitButton: {fileID: 1788208334}
   selectionPanel: {fileID: 420950233}
+  IDEPanel: {fileID: 0}
   tabletManager: {fileID: 127124354}
 --- !u!4 &566600255
 Transform:
@@ -39735,6 +39736,7 @@ MonoBehaviour:
   runButton: {fileID: 1788208331}
   submitButton: {fileID: 1788208334}
   selectionPanel: {fileID: 420950233}
+  IDEPanel: {fileID: 1788208332}
   tabletManager: {fileID: 127124354}
 --- !u!54 &1983797649
 Rigidbody:

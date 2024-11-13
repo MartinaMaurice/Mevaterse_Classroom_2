@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,10 +16,14 @@ public class IDEManager : MonoBehaviour
     [SerializeField] private Button runButton;
     [SerializeField] private Button submitButton;
     [SerializeField] private GameObject selectionPanel; // Panel with IDE and Quiz buttons
+    [SerializeField] private GameObject IDEPanel; // Panel with IDE and Quiz buttons
+
     private FirebaseFirestore db;
     public TabletManager tabletManager;
 
-    private string serverUrl = "http://192.168.100.137:5000/run";
+    private string serverUrl = "http://localhost:5000/run";  // Use "localhost" explicitly
+    private Process serverProcess;
+
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -26,18 +31,60 @@ public class IDEManager : MonoBehaviour
         runButton.onClick.AddListener(OnRunCode);
         submitButton.onClick.AddListener(OnSubmitCode);
         selectionPanel.SetActive(false);
-        Debug.LogError("IDEManager Start");
+        UnityEngine.Debug.Log("IDEManager Start");
+
+        StartServer();
     }
 
     // Method to send code to server for execution
     private void OnRunCode()
     {
         string userCode = codeInputField.text;
-        Debug.LogError("Code being sent to server");
+        UnityEngine.Debug.Log("Code being sent to server");
         StartCoroutine(SendCodeToServer(userCode));
     }
 
-    // Coroutine to send code to the server and get output
+    private void StartServer()
+    {
+
+        string pythonPath = @"C:/Users/Martina/AppData/Local/Programs/Python/Python313/python.exe";
+
+        string serverScriptPath = @"c:/Users/Martina/OneDrive/Documents/GitHub/Mevaterse_Classroom_2/Assets/server.py";
+
+        ProcessStartInfo startInfo = new ProcessStartInfo
+        {
+            FileName = pythonPath,
+            Arguments = serverScriptPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true  // Run without showing a command prompt window
+        };
+
+        try
+        {
+            serverProcess = new Process { StartInfo = startInfo };
+            serverProcess.OutputDataReceived += (sender, args) => UnityEngine.Debug.Log("Server Output: " + args.Data);
+            serverProcess.ErrorDataReceived += (sender, args) => UnityEngine.Debug.LogError("Server Error: " + args.Data);
+            serverProcess.Start();
+            serverProcess.BeginOutputReadLine();
+            serverProcess.BeginErrorReadLine();
+            UnityEngine.Debug.Log("Server started successfully.");
+        }
+        catch (System.Exception e)
+        {
+            UnityEngine.Debug.LogError("Failed to start server: " + e.Message);
+        }
+    }
+    private void OnApplicationQuit()
+    {
+        // Ensure the server process is terminated when Unity quits
+        if (serverProcess != null && !serverProcess.HasExited)
+        {
+            serverProcess.Kill();
+            UnityEngine.Debug.Log("Server process terminated.");
+        }
+    }
     private IEnumerator SendCodeToServer(string code)
     {
         Dictionary<string, string> formData = new Dictionary<string, string>
@@ -52,21 +99,21 @@ public class IDEManager : MonoBehaviour
         if (request.result == UnityWebRequest.Result.Success)
         {
             outputText.text = request.downloadHandler.text; // Directly display the plain text
-            Debug.Log("Code executed successfully, output: " + request.downloadHandler.text);
+            UnityEngine.Debug.Log("Code executed successfully, output: " + request.downloadHandler.text);
         }
         else
         {
             outputText.text = "Error:\n" + request.error;
-            Debug.LogError("Error in code execution: " + request.error);
+            UnityEngine.Debug.LogError("Error in code execution: " + request.error);
         }
     }
     private void OnSubmitCode()
     {
-        Debug.Log("Attempting to submit code to Firestore.");
+        UnityEngine.Debug.Log("Attempting to submit code to Firestore.");
 
         if (tabletManager == null || string.IsNullOrEmpty(tabletManager.UserId))
         {
-            Debug.LogError("User ID is not set. Cannot save code.");
+            UnityEngine.Debug.LogError("User ID is not set. Cannot save code.");
             return;
         }
 
@@ -74,7 +121,7 @@ public class IDEManager : MonoBehaviour
         string codeOutput = outputText.text;
         string userId = tabletManager.UserId;
 
-        Debug.Log("Code and output ready for submission. User ID: " + userId);
+        UnityEngine.Debug.Log("Code and output ready for submission. User ID: " + userId);
 
         // You could use a unique identifier or incrementing ID for each exercise, e.g., Exercise1, Exercise2, etc.
         string exerciseNumber = "Exercise1"; // Update this as needed for dynamic naming or pass it as a parameter
@@ -92,12 +139,15 @@ public class IDEManager : MonoBehaviour
             {
                 if (task.IsCompleted)
                 {
-                    Debug.Log("Code successfully saved for user.");
+                    UnityEngine.Debug.Log("Code successfully saved for user.");
                 }
                 else
                 {
-                    Debug.LogError("Error saving code to Firestore: " + task.Exception);
+                    UnityEngine.Debug.LogError("Error saving code to Firestore: " + task.Exception);
                 }
             });
+
+        IDEPanel.SetActive(false);
+        selectionPanel.SetActive(true);
     }
 }

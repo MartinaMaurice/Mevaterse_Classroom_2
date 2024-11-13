@@ -20,6 +20,6 @@ def run_code():
         return Response("Code execution timed out", status=400)
     except Exception as e:
         return Response(str(e), status=400)
-
+    
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=5000)
