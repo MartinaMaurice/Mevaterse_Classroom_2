@@ -53,10 +53,8 @@ public class InstructorTabletManager : MonoBehaviour
                 if (document.Exists && document.ContainsField("role") && document.GetValue<string>("role") == "Instructor")
                 {
                     Debug.Log("Instructor verified.");
-
-                    // Show the Student List panel and hide the Instructor ID panel
                     userIDPanel.SetActive(false);
-                    studentListPanel.SetActive(true);
+                    studentListPanel.SetActive(true); // Ensure student list panel is active
                     gradePanel.SetActive(false);
 
                     RetrieveStudentsWithExercises();
@@ -73,52 +71,91 @@ public class InstructorTabletManager : MonoBehaviour
         });
     }
 
-
     private void RetrieveStudentsWithExercises()
     {
         Debug.Log("Retrieving students with exercises...");
 
-        // Clear any existing student buttons to avoid duplicates
-        foreach (Transform child in studentListPanel.transform)
+        // Find the Content Transform for Student Buttons
+        Transform contentTransform = studentListPanel.transform.Find("StudentsScrollView/Viewport/Content");
+        if (contentTransform == null)
+        {
+            Debug.LogError("Content transform not found. Please check your hierarchy.");
+            return;
+        }
+
+        // Clear existing buttons to avoid duplicates
+        foreach (Transform child in contentTransform)
         {
             Destroy(child.gameObject);
         }
 
-        // Query Firestore to find users who have exercises
-        db.Collection("users").WhereGreaterThanOrEqualTo("exercises", 1)
+        // Query Firestore to retrieve all users
+        db.Collection("users")
             .GetSnapshotAsync()
             .ContinueWithOnMainThread(task =>
             {
                 if (task.IsCompletedSuccessfully)
                 {
-                    QuerySnapshot snapshot = task.Result;
+                    QuerySnapshot userSnapshots = task.Result;
+                    int studentCount = 0;
 
-                    if (snapshot.Documents.Count() > 0)
+                    foreach (DocumentSnapshot userDoc in userSnapshots.Documents)
                     {
-                        foreach (DocumentSnapshot document in snapshot.Documents)
-                        {
-                            string userId = document.Id;
-                            string userName = document.ContainsField("name") ? document.GetValue<string>("name") : "Unknown User";
+                        string userId = userDoc.Id;
+                        string userName = userDoc.ContainsField("name") ? userDoc.GetValue<string>("name") : "Unknown User";
 
-                            Debug.Log("Found student: " + userName);
+                        db.Collection("users").Document(userId).Collection("exercises")
+                            .GetSnapshotAsync()
+                            .ContinueWithOnMainThread(exerciseTask =>
+                            {
+                                if (exerciseTask.IsCompletedSuccessfully && exerciseTask.Result.Count() > 0)
+                                {
+                                    studentCount++;
+                                    Debug.Log("Instantiating button for student: " + userName);
 
-                            // Instantiate a button for each student
-                            GameObject studentButton = Instantiate(studentButtonPrefab, studentListPanel.transform);
-                            studentButton.GetComponentInChildren<TMP_Text>().text = userName;
-                            studentButton.GetComponent<Button>().onClick.AddListener(() => OnGradeButtonClicked(userId));
-                        }
+                                    // Instantiate the student button prefab under Content
+                                    GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
+                                    if (studentButton == null)
+                                    {
+                                        Debug.LogError("Failed to instantiate student button.");
+                                        return;
+                                    }
+
+                                    TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
+                                    if (studentNameText == null)
+                                    {
+                                        Debug.LogError("TMP_Text component missing on student button prefab.");
+                                    }
+                                    else
+                                    {
+                                        // Set the text for the student’s name
+                                        studentNameText.text = userName;
+                                    }
+
+                                    // Add a listener to handle grading
+                                    studentButton.GetComponent<Button>().onClick.AddListener(() => OnGradeButtonClicked(userId));
+
+                                    Debug.Log("Button instantiated with text: " + userName);
+                                }
+                            });
+                    }
+
+                    if (studentCount == 0)
+                    {
+                        Debug.Log("No students with exercises found.");
                     }
                     else
                     {
-                        Debug.Log("No students found with exercises.");
+                        Debug.Log("Total students with exercises found: " + studentCount);
                     }
                 }
                 else
                 {
-                    Debug.LogError("Failed to retrieve students with exercises: " + task.Exception);
+                    Debug.LogError("Failed to retrieve users: " + task.Exception);
                 }
             });
     }
+
     private void OnGradeButtonClicked(string userId)
     {
         selectedUserId = userId;
