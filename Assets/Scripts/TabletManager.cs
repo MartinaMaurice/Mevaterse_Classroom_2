@@ -221,25 +221,74 @@ public class TabletManager : MonoBehaviour
         submitButton.onClick.AddListener(() => Debug.Log("Please select an answer.")); // Placeholder until answer is selected
     }
 
-    void SaveQuizResults()
+ void SaveQuizResults()
+{
+    // Define the data to save for this specific quiz result
+    Dictionary<string, object> resultData = new Dictionary<string, object>
     {
-        Dictionary<string, object> resultData = new Dictionary<string, object>
-        {
-            { "quiz_id", selectedQuizId },
-            { "quiz_completed", true },
-            { "score", score } // Save the final score
-        };
+        { "quiz_id", selectedQuizId },
+        { "quiz_completed", true },
+        { "score", score },
+        { "activity_name", "Quiz" } // Adjust as needed, e.g., based on activity type
+    };
 
-        db.Collection("users").Document(userId).Collection("quiz_results").Document(selectedQuizId).SetAsync(resultData, SetOptions.MergeAll).ContinueWithOnMainThread(task =>
+    // Save individual activity result in the user's "activity_results" subcollection
+    db.Collection("users").Document(userId).Collection("activity_results").Document(selectedQuizId).SetAsync(resultData, SetOptions.MergeAll).ContinueWithOnMainThread(task =>
+    {
+        if (task.IsCompleted)
         {
-            if (task.IsCompleted)
+            Debug.Log("Activity result successfully saved for user.");
+            
+            // After saving individual activity result, update the user's total score
+            UpdateTotalScore();
+        }
+        else
+        {
+            Debug.LogError("Error saving activity result: " + task.Exception);
+        }
+    });
+}
+
+// Method to update the user's total score
+void UpdateTotalScore()
+{
+    // Reference to the user's main document
+    DocumentReference userDocRef = db.Collection("users").Document(userId);
+
+    // Retrieve the existing total score
+    userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    {
+        if (task.IsCompleted && task.Result.Exists)
+        {
+            int existingTotalScore = 0;
+
+            // Check if the "total_score" field exists and retrieve its value
+            if (task.Result.ContainsField("total_score"))
             {
-                Debug.Log("Quiz results successfully saved for user.");
+                existingTotalScore = task.Result.GetValue<int>("total_score");
             }
-            else
+
+            // Calculate the new total score by adding the current quiz score
+            int newTotalScore = existingTotalScore + score;
+
+            // Update the "total_score" field in the user's main document
+            userDocRef.UpdateAsync("total_score", newTotalScore).ContinueWithOnMainThread(updateTask =>
             {
-                Debug.LogError("Error saving quiz results: " + task.Exception);
-            }
-        });
-    }
+                if (updateTask.IsCompleted)
+                {
+                    Debug.Log("Total score successfully updated.");
+                }
+                else
+                {
+                    Debug.LogError("Error updating total score: " + updateTask.Exception);
+                }
+            });
+        }
+        else
+        {
+            Debug.LogError("Error retrieving user's total score: " + task.Exception);
+        }
+    });
+}
+
 }
