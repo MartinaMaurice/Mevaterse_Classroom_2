@@ -32,7 +32,7 @@ public class InstructorTabletManager : MonoBehaviour
         userIDPanel.SetActive(true);
         studentListPanel.SetActive(false);
         gradePanel.SetActive(false);
-
+        // RetrieveStudentsWithExercises   ();
         submitUserIDButton.onClick.AddListener(OnSubmitUserID);
     }
 
@@ -115,27 +115,20 @@ public class InstructorTabletManager : MonoBehaviour
 
                                     // Instantiate the student button prefab under Content
                                     GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
-                                    if (studentButton == null)
-                                    {
-                                        Debug.LogError("Failed to instantiate student button.");
-                                        return;
-                                    }
 
+                                    // Ensure TMP_Text component is found
                                     TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
-                                    if (studentNameText == null)
+                                    if (studentNameText != null)
                                     {
-                                        Debug.LogError("TMP_Text component missing on student button prefab.");
+                                        studentNameText.text = userName;
                                     }
                                     else
                                     {
-                                        // Set the text for the student’s name
-                                        studentNameText.text = userName;
+                                        Debug.LogError("Failed to find TMP_Text component on student button prefab.");
                                     }
 
                                     // Add a listener to handle grading
                                     studentButton.GetComponent<Button>().onClick.AddListener(() => OnGradeButtonClicked(userId));
-
-                                    Debug.Log("Button instantiated with text: " + userName);
                                 }
                             });
                     }
@@ -155,6 +148,7 @@ public class InstructorTabletManager : MonoBehaviour
                 }
             });
     }
+
 
     private void OnGradeButtonClicked(string userId)
     {
@@ -176,8 +170,23 @@ public class InstructorTabletManager : MonoBehaviour
                         string output = exerciseDoc.ContainsField("output") ? exerciseDoc.GetValue<string>("output") : "No output available";
                         selectedExerciseId = exerciseDoc.Id;
 
-                        inputCodeText.text = inputCode;
-                        outputText.text = output;
+                        if (inputCodeText != null)
+                        {
+                            inputCodeText.text = inputCode;
+                        }
+                        else
+                        {
+                            Debug.LogWarning("Input code text field is not assigned in the Inspector.");
+                        }
+
+                        if (outputText != null)
+                        {
+                            outputText.text = output;
+                        }
+                        else
+                        {
+                            Debug.LogWarning("Output text field is not assigned in the Inspector.");
+                        }
                     }
                 }
                 else
@@ -187,37 +196,46 @@ public class InstructorTabletManager : MonoBehaviour
             });
     }
 
-
     public void OnSaveGradeButtonClicked()
     {
-        string grade = gradeInputField.text;
+        string grade = gradeInputField?.text; // Safe access in case it's null
+
+        // Debug log for grade input and selected IDs
+        Debug.Log($"Attempting to save score. Grade input: {grade}, Selected User ID: {selectedUserId}, Selected Exercise ID: {selectedExerciseId}");
 
         if (!string.IsNullOrEmpty(grade) && !string.IsNullOrEmpty(selectedUserId) && !string.IsNullOrEmpty(selectedExerciseId))
         {
+            // Prepare data with "score" instead of "grade"
             Dictionary<string, object> gradeData = new Dictionary<string, object>
-            {
-                { "grade", grade }
-            };
+        {
+            { "score", grade } // Storing the grade as "score"
+        };
+
+            // Debug log for Firestore path
+            Debug.Log($"Saving score to Firestore path: users/{selectedUserId}/exercises/{selectedExerciseId}");
 
             db.Collection("users").Document(selectedUserId).Collection("exercises").Document(selectedExerciseId)
                 .SetAsync(gradeData, SetOptions.MergeAll)
                 .ContinueWithOnMainThread(task =>
                 {
-                    if (task.IsCompleted)
+                    if (task.IsCompletedSuccessfully)
                     {
-                        Debug.Log("Grade saved successfully.");
+                        Debug.Log("Score saved successfully.");
+
+                        // Switch panels: hide grade panel, show student list panel
                         gradePanel.SetActive(false);
                         studentListPanel.SetActive(true);
                     }
                     else
                     {
-                        Debug.LogError("Failed to save grade: " + task.Exception);
+                        Debug.LogError("Failed to save score: " + task.Exception);
                     }
                 });
         }
         else
         {
-            Debug.LogError("Grade or user information is missing.");
+            Debug.LogError("Score or user information is missing. Please check that all fields are properly assigned.");
         }
     }
+
 }
