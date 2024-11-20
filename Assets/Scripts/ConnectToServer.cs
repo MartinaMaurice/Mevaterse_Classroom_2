@@ -53,6 +53,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 
     void Start()
     {
+                PhotonCustomTypes.RegisterCustomTypes();
+
         firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
 
         if (PhotonNetwork.IsConnected)
