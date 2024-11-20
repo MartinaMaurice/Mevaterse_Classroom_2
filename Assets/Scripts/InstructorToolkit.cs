@@ -34,7 +34,7 @@ public class InstructorToolkit : MonoBehaviour
     public GameObject slideDisplayPanel;
 
     public GameObject debuggingPanel;
-    public string pythonPath = "C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
+    public string pythonPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "python", "python.exe");
 
     void Start()
     {

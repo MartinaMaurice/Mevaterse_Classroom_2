@@ -3,7 +3,7 @@ import sys
 import os
 
 def convert_pdf_to_images(pdf_path, output_folder):
-    poppler_path = r"C:\Users\DaWitchBtch\Downloads\Release-24.08.0-0\poppler-24.08.0\Library\bin"
+    poppler_path = os.path.join(os.path.dirname(__file__), 'poppler-24.08.0', 'Library', 'bin')
     images = convert_from_path(pdf_path, poppler_path=poppler_path)
     image_paths = []
     for i, image in enumerate(images):

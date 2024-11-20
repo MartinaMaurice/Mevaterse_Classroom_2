@@ -2876,7 +2876,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 8.4487915, y: -3.2595367}
+  m_AnchoredPosition: {x: 8.4487915, y: -3.259552}
   m_SizeDelta: {x: -279.6071, y: -109.6195}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &153306593
@@ -2911,7 +2911,7 @@ MonoBehaviour:
   exerciseButton: {fileID: 1550194957}
   slideDisplayPanel: {fileID: 2193423312837781259}
   debuggingPanel: {fileID: 487851549}
-  pythonPath: C:\Users\DaWitchBtch\AppData\Local\Programs\Python\Python311\python.exe
+  pythonPath: python\python.exe
 --- !u!54 &163662607
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8414,7 +8414,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 8.448059, y: -3.2595978}
+  m_AnchoredPosition: {x: 8.448059, y: -3.259613}
   m_SizeDelta: {x: -279.61, y: -109.62}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &487851552
@@ -45241,11 +45241,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6321931189795870026, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -0.4357047
+      value: -0.43562746
       objectReference: {fileID: 0}
     - target: {fileID: 6321931189795870026, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000061035156
+      value: 0.000045776367
       objectReference: {fileID: 0}
     - target: {fileID: 6521471717145108099, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchorMax.x
