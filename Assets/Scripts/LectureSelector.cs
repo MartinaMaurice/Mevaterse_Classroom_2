@@ -3,9 +3,10 @@ using System.IO;
 using UnityEngine;
 using TMPro;
 using Firebase.Firestore;
+using Photon.Pun;
 using System.Threading.Tasks;
 
-public class LectureSelector : MonoBehaviour
+public class LectureSelector : MonoBehaviourPunCallbacks
 {
     public TMP_Dropdown lectureDropdown;  // TMP_Dropdown for TextMeshPro
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
@@ -17,6 +18,9 @@ public class LectureSelector : MonoBehaviour
     // Lists to store quiz display names and IDs
     private List<string> quizTitles = new List<string>();
     private List<string> quizIds = new List<string>();
+
+    // Dictionary to manage player group assignments
+    private Dictionary<string, string> playerGroups = new Dictionary<string, string>();
 
     void Start()
     {
@@ -122,6 +126,7 @@ public class LectureSelector : MonoBehaviour
         {
             tabletManager.SetLectureType("Exercise"); // Set lecture type as "Exercise"
             boardController.LoadSlidesForLecture(selectedItem);
+            AssignPrivateChatsForExercise();
             Debug.Log("Exercise selected.");
         }
         else if (selectedItem.StartsWith("Assignment"))
@@ -148,5 +153,56 @@ public class LectureSelector : MonoBehaviour
                 Debug.LogError("BoardController is not assigned in the Inspector.");
             }
         }
+    }
+
+    void AssignPrivateChatsForExercise()
+    {
+        Debug.Log("Assigning private chats for Exercise.");
+        var players = Photon.Pun.PhotonNetwork.PlayerList;
+
+        if (players.Length == 0)
+        {
+            Debug.LogWarning("No players in the room.");
+            return;
+        }
+
+        List<string> groupNames = GenerateGroupNames((players.Length + 1) / 2); // Calculate the number of groups
+        int groupIndex = 0;
+
+        for (int i = 0; i < players.Length; i += 2)
+        {
+            string groupName = groupNames[groupIndex];
+            string player1Name = players[i].NickName;
+            string player2Name = (i + 1 < players.Length) ? players[i + 1].NickName : "No Partner";
+
+            Debug.Log($"Assigning Group {groupName}: {player1Name} and {player2Name}");
+
+            AssignToGroup(player1Name, groupName);
+            if (player2Name != "No Partner")
+            {
+                AssignToGroup(player2Name, groupName);
+            }
+
+            groupIndex++;
+        }
+    }
+
+    void AssignToGroup(string playerName, string groupName)
+    {
+        if (!playerGroups.ContainsKey(playerName))
+        {
+            playerGroups[playerName] = groupName;
+            Debug.Log($"Player {playerName} assigned to group {groupName}.");
+        }
+    }
+
+    List<string> GenerateGroupNames(int count)
+    {
+        List<string> groupNames = new List<string>();
+        for (int i = 0; i < count; i++)
+        {
+            groupNames.Add("Group " + (char)('A' + i));
+        }
+        return groupNames;
     }
 }
