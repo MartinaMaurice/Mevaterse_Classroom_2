@@ -51,21 +51,21 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
             Debug.LogError("No slides found in " + imagesPath);
         }
     }
-
     void Update()
     {
         if (PhotonNetwork.LocalPlayer.UserId != Presenter.Instance.presenterID) return;
 
-        if (Input.GetKeyUp(KeyCode.RightArrow))
+        if (Input.GetKeyUp(KeyCode.RightArrow) && slides.Count > 0)
         {
             photonView.RPC("ChangeSlideRpc", RpcTarget.All, +1);
         }
 
-        if (Input.GetKeyUp(KeyCode.LeftArrow))
+        if (Input.GetKeyUp(KeyCode.LeftArrow) && slides.Count > 0)
         {
             photonView.RPC("ChangeSlideRpc", RpcTarget.All, -1);
         }
     }
+
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
@@ -74,21 +74,32 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
 
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
+        if (slides.Count == 0)
+        {
+            Debug.LogError("Cannot sync slides because the slides list is empty.");
+            return;
+        }
+
         if (stream.IsWriting)
         {
             stream.SendNext(current);
-            photonView.RPC("ChangeSlideRpc", RpcTarget.All, 0);
         }
         else
         {
             current = (int)stream.ReceiveNext();
-            photonView.RPC("ChangeSlideRpc", RpcTarget.All, 0);
         }
     }
+
 
     [PunRPC]
     public void ChangeSlideRpc(int value)
     {
+        if (slides.Count == 0)
+        {
+            Debug.LogError("No slides are loaded. Cannot change slides.");
+            return;
+        }
+
         current += value;
 
         if (current >= slides.Count)
@@ -100,6 +111,8 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
         {
             current = slides.Count - 1;
         }
+
         GetComponent<Renderer>().material = slides[current];
     }
+
 }
