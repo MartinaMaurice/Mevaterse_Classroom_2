@@ -26,16 +26,13 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 {
     public TMP_InputField nameInputField;
     public TMP_InputField roomNameInputField;
-    public TMP_Dropdown roleDropdown;
 
     public GameObject initialGUI;
     public GameObject loggedGUI;
-    public GameObject courseCreationUI;
 
 
     public GameObject errorMessage;
 
-    public Button hostButton;
     public Button clientButton;
     public Button quitButton;
     public Button leaveButton;
@@ -71,9 +68,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         loggedGUI.SetActive(false);
         errorMessage.SetActive(false);
 
-        roleDropdown.onValueChanged.AddListener(delegate { OnRoleSelected(); });
         clientButton.onClick.AddListener(ConnectWithRole);
-        hostButton.onClick.AddListener(CreateCourseRoom);
         quitButton.onClick.AddListener(() => Application.Quit());
         leaveButton.onClick.AddListener(() => { buttonClick.Play(); LeaveRoom(); });
         editButton.onClick.AddListener(() => SceneManager.LoadScene("CharacterEditor"));
@@ -83,14 +78,13 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     {
         Debug.Log("Connected to Photon Master Server");
         PhotonNetwork.JoinLobby();  // Ensure we are in the lobby to see available rooms
-        hostButton.enabled = true;
         clientButton.enabled = true;
     }
-    private void OnRoleSelected()
-    {
-        selectedRole = roleDropdown.options[roleDropdown.value].text;
-        Debug.Log($"Role selected: {selectedRole}");
-    }
+    // private void OnRoleSelected()
+    // {
+    //     selectedRole = roleDropdown.options[roleDropdown.value].text;
+    //     Debug.Log($"Role selected: {selectedRole}");
+    // }
 
 
     private void ConnectWithRole()
@@ -110,7 +104,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 
         if (selectedRole == "Instructor")
         {
-            courseCreationUI.SetActive(true);
             Debug.Log("Instructor role selected, showing course creation UI.");
         }
         else if (selectedRole == "Student")
@@ -225,7 +218,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         }
 
         initialGUI.SetActive(false);
-        courseCreationUI.SetActive(false);
 
         loggedGUI.SetActive(true);
 
@@ -352,9 +344,6 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     }
 
 
-    private void OnHostButtonClicked()
-    {
-        StartCoroutine(WaitForConnectionAndCreateRoom());
-    }
+
 
 }

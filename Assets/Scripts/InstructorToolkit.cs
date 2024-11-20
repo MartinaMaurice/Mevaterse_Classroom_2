@@ -34,13 +34,15 @@ public class InstructorToolkit : MonoBehaviour
     public GameObject slideDisplayPanel;
 
     public GameObject debuggingPanel;
-    public string pythonPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "python", "python.exe");
+    public string pythonPath;
 
     void Start()
     {
         toolkitPanel.SetActive(false);
         db = FirebaseFirestore.DefaultInstance;
-
+        pythonPath = @"C:\Users\Martina\OneDrive\Documents\GitHub\Mevaterse_Classroom_2\python\Scripts\python.exe";
+        UnityDebug.Log($"Python Path: {pythonPath}");
+        VerifyPythonEnvironment();
         addQuizButton.onClick.AddListener(AddQuiz);
         addSlidesButton.onClick.AddListener(AddSlides);
         addDebuggingButton.onClick.AddListener(OpenDebuggingPanel);
@@ -55,9 +57,17 @@ public class InstructorToolkit : MonoBehaviour
         // futureOptionButton.onClick.AddListener(FutureFeature);
         addUserButton.onClick.AddListener(AddUsersFromExcel);
     }
-
+    void VerifyPythonEnvironment()
+    {
+        if (!File.Exists(pythonPath))
+        {
+            UnityDebug.LogError($"Python executable not found at {pythonPath}");
+        }
+    }
     public void ToggleToolkit()
     {
+        UnityDebug.Log($"Python Path: {pythonPath}");
+
         bool isActive = toolkitPanel.activeSelf;
         if (!isActive)
         {
@@ -186,6 +196,7 @@ public class InstructorToolkit : MonoBehaviour
         string lectureFolderName = "Lecture_" + lectureNumber;
         string outputFolder = Path.Combine(Application.dataPath, "Resources", "Images", lectureFolderName);
         UnityEngine.Debug.Log("Output folder: " + outputFolder);
+
         // Create the directory if it doesn't exist
         if (!Directory.Exists(outputFolder))
         {
@@ -196,78 +207,118 @@ public class InstructorToolkit : MonoBehaviour
         string pdfPath = StandaloneFileBrowser.OpenFilePanel("Select PDF", "", "pdf", false)[0];
         List<string> slidePaths = RunPythonScript(pdfPath, outputFolder);
 
-        // Display slides if any images were generated
+        // Check if any images were generated
         if (slidePaths != null && slidePaths.Count > 0)
         {
-            DisplaySlides(slidePaths);
-            SaveSlidesToFirestore(lectureNumber, slidePaths);
+            UnityEditor.AssetDatabase.Refresh(); // Force Unity to refresh assets
 
+            // Display slides and save them to Firestore, but only once
+            DisplaySlides(slidePaths);
+            SaveSlidesToFirestore(lectureNumber, slidePaths);  // Ensure this is only called once
         }
         else
         {
-            UnityEngine.Debug.LogError("Failed to generate slides using the Python script.");
+            UnityEngine.Debug.LogError("No slides were generated.");
         }
     }
+
     void SaveSlidesToFirestore(int lectureNumber, List<string> slidePaths)
     {
-        // Create a unique document ID for the lecture
         string lectureId = "Lecture_" + lectureNumber;
 
-        // Prepare data to save
-        Dictionary<string, object> lectureData = new Dictionary<string, object>
-    {
-        { "lectureNumber", lectureNumber },
-        { "slidePaths", slidePaths } // Saving the list of paths directly
-    };
-
-        // Reference to Firestore and add the document
-        db.Collection("Lectures").Document(lectureId).SetAsync(lectureData).ContinueWithOnMainThread(task =>
+        // Check if the lecture data already exists in Firestore to prevent duplicates
+        db.Collection("Lectures").Document(lectureId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted)
             {
-                UnityEngine.Debug.Log("Lecture " + lectureId + " and slide paths saved successfully in Firestore.");
+                if (task.Result.Exists)
+                {
+                    UnityEngine.Debug.Log($"Lecture {lectureId} already exists in Firestore. Skipping save.");
+                }
+                else
+                {
+                    // Prepare data to save
+                    Dictionary<string, object> lectureData = new Dictionary<string, object>
+                    {
+                    { "lectureNumber", lectureNumber },
+                    { "slidePaths", slidePaths } // Saving the list of paths directly
+                    };
+
+                    // Save to Firestore
+                    db.Collection("Lectures").Document(lectureId).SetAsync(lectureData).ContinueWithOnMainThread(saveTask =>
+                    {
+                        if (saveTask.IsCompleted)
+                        {
+                            UnityEngine.Debug.Log($"Lecture {lectureId} and slide paths saved successfully in Firestore.");
+                        }
+                        else
+                        {
+                            UnityEngine.Debug.LogError($"Error saving lecture data to Firestore: {saveTask.Exception}");
+                        }
+                    });
+                }
             }
             else
             {
-                UnityEngine.Debug.LogError("Error saving lecture data to Firestore: " + task.Exception);
+                UnityEngine.Debug.LogError("Error checking Firestore document existence.");
             }
         });
     }
+
     List<string> RunPythonScript(string pdfPath, string outputFolder)
     {
         List<string> slidePaths = new List<string>();
+        string scriptPath = Path.GetFullPath(Path.Combine(Application.dataPath, "../Assets/convert_pdf.py"));
+
+        UnityEngine.Debug.Log($"Python Path: {pythonPath}");
+        UnityEngine.Debug.Log($"Script Path: {scriptPath}");
+        UnityEngine.Debug.Log($"PDF Path: {pdfPath}");
+        UnityEngine.Debug.Log($"Output Folder: {outputFolder}");
 
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = pythonPath,
-            Arguments = $"\"{Application.dataPath}/convert_pdf.py\" \"{pdfPath}\" \"{outputFolder}\"",
+            Arguments = $"\"{scriptPath}\" \"{pdfPath}\" \"{outputFolder}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(scriptPath)
         };
 
-        using (Process process = Process.Start(startInfo))
+        try
         {
-            using (StreamReader reader = process.StandardOutput)
+            using (Process process = Process.Start(startInfo))
             {
-                string line;
-                while ((line = reader.ReadLine()) != null)
+                string output = process.StandardOutput.ReadToEnd();
+                string error = process.StandardError.ReadToEnd();
+
+                UnityEngine.Debug.Log($"Python Output: {output}");
+                if (!string.IsNullOrEmpty(error))
                 {
-                    if (File.Exists(line.Trim()))
+                    UnityEngine.Debug.LogError($"Python Error: {error}");
+                }
+
+                process.WaitForExit();
+
+                // Parse valid paths from Python output
+                foreach (var line in output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string trimmedLine = line.Trim();
+                    if (System.IO.File.Exists(trimmedLine))
                     {
-                        slidePaths.Add(line.Trim());
+                        slidePaths.Add(trimmedLine);
+                    }
+                    else
+                    {
+                        UnityEngine.Debug.LogError($"File not found in Python output: {trimmedLine}");
                     }
                 }
             }
-
-            string error = process.StandardError.ReadToEnd();
-            if (!string.IsNullOrEmpty(error))
-            {
-                UnityEngine.Debug.LogError("Python error: " + error);
-            }
-
-            process.WaitForExit();
+        }
+        catch (Exception e)
+        {
+            UnityEngine.Debug.LogError($"Failed to run Python script: {e.Message}");
         }
 
         return slidePaths;
