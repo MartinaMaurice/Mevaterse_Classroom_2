@@ -98,6 +98,20 @@ public class FirestoreManager : MonoBehaviour
             }
         });
     }
+    public void ValidateCourseID(string courseID, System.Action<bool> callback)
+    {
+        db.Collection("Courses").Document(courseID).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted && task.Result.Exists)
+            {
+                callback(true);
+            }
+            else
+            {
+                callback(false);
+            }
+        });
+    }
 
     // Check if a course exists in the available courses list
     public bool CourseExistsInFirestore(string courseId)
@@ -105,4 +119,3 @@ public class FirestoreManager : MonoBehaviour
         return availableCourses.Contains(courseId);
     }
 }
- 
