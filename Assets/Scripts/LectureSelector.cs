@@ -12,6 +12,7 @@ public class LectureSelector : MonoBehaviourPunCallbacks
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
     public TabletManager tabletManager;  // Reference to TabletManager
 
+
     private FirebaseFirestore db;
     private string imagesBasePath;
 
@@ -26,7 +27,10 @@ public class LectureSelector : MonoBehaviourPunCallbacks
     {
         db = FirebaseFirestore.DefaultInstance;
         imagesBasePath = Path.Combine(Application.dataPath, "Resources", "Images");
-        PopulateLectureDropdown();
+        if (gameObject.activeSelf)
+        {
+            PopulateLectureDropdown();
+        }
     }
 
     async void PopulateLectureDropdown()
