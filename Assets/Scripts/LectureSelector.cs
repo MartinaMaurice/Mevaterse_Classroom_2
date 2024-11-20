@@ -3,10 +3,9 @@ using System.IO;
 using UnityEngine;
 using TMPro;
 using Firebase.Firestore;
-using Photon.Pun;
 using System.Threading.Tasks;
 
-public class LectureSelector : MonoBehaviourPunCallbacks
+public class LectureSelector : MonoBehaviour
 {
     public TMP_Dropdown lectureDropdown;  // TMP_Dropdown for TextMeshPro
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
@@ -98,23 +97,20 @@ public class LectureSelector : MonoBehaviourPunCallbacks
     void OnLectureSelected(TMP_Dropdown dropdown)
     {
         string selectedItem = dropdown.options[dropdown.value].text;
+        int selectedIndex = dropdown.value;
 
         Debug.Log("Selected item: " + selectedItem);
 
-        if (selectedItem.StartsWith("Exercise"))
+        if (selectedItem.StartsWith("Quiz"))
         {
-            // Handle grouping for exercises
-            AssignPrivateChatsForExercise();
-            Debug.Log("Exercise selected.");
-        }
-        else if (selectedItem.StartsWith("Quiz"))
-        {
-            int quizIndex = dropdown.value - (lectureDropdown.options.Count - quizTitles.Count);
+            // Use the index to retrieve the corresponding quiz ID
+            int quizIndex = selectedIndex - (lectureDropdown.options.Count - quizTitles.Count);
             if (quizIndex >= 0 && quizIndex < quizIds.Count)
             {
                 string quizId = quizIds[quizIndex];
                 tabletManager.SetQuizId(quizId);  // Set the quiz ID in TabletManager
-                tabletManager.SetLectureType("Quiz");
+                tabletManager.SetLectureType("Quiz"); // Set lecture type as "Quiz"
+
                 Debug.Log("Quiz ID for selected item: " + quizId);
             }
             else
@@ -122,64 +118,35 @@ public class LectureSelector : MonoBehaviourPunCallbacks
                 Debug.LogError("Quiz ID not found for selected item: " + selectedItem);
             }
         }
+        else if (selectedItem.StartsWith("Exercise"))
+        {
+            tabletManager.SetLectureType("Exercise"); // Set lecture type as "Exercise"
+            boardController.LoadSlidesForLecture(selectedItem);
+            Debug.Log("Exercise selected.");
+        }
+        else if (selectedItem.StartsWith("Assignment"))
+        {
+            tabletManager.SetLectureType("Assignment"); // Set lecture type as "Assignment"
+            boardController.LoadSlidesForLecture(selectedItem);
+            Debug.Log("Assignment selected.");
+        }
+        else if (selectedItem.StartsWith("Lecture"))
+        {
+            tabletManager.SetLectureType("Lecture"); // Set lecture type as "Lecture"
+            boardController.LoadSlidesForLecture(selectedItem);
+            Debug.Log("Lecture selected.");
+        }
         else
         {
-            boardController.LoadSlidesForLecture(selectedItem);
-        }
-    }
-
-    void AssignPrivateChatsForExercise()
-    {
-        Debug.Log("AssignPrivateChatsForExercise() called.");
-
-        var players = PhotonNetwork.PlayerList;
-
-        if (players == null || players.Length == 0)
-        {
-            Debug.LogWarning("No players in the room.");
-            return;
-        }
-
-        List<string> groupNames = GenerateGroupNames((players.Length + 1) / 2); // Calculate the number of groups
-        int groupIndex = 0;
-
-        for (int i = 0; i < players.Length; i += 2)
-        {
-            string groupName = groupNames[groupIndex];
-            string player1Name = players[i].NickName;
-            string player2Name = (i + 1 < players.Length) ? players[i + 1].NickName : "No Partner";
-
-            Debug.Log($"Assigning Group {groupName}: {player1Name} and {player2Name}");
-
-            // Assign group to player 1
-            photonView.RPC("AssignToGroupChat", players[i], groupName, player2Name);
-
-            // Assign group to player 2, if available
-            if (i + 1 < players.Length)
+            // Local folder (Lecture, Assignment, etc.) selected
+            if (boardController != null)
             {
-                photonView.RPC("AssignToGroupChat", players[i + 1], groupName, player1Name);
+                boardController.LoadSlidesForLecture(selectedItem);
             }
-
-            groupIndex++;
+            else
+            {
+                Debug.LogError("BoardController is not assigned in the Inspector.");
+            }
         }
-    }
-
-    List<string> GenerateGroupNames(int count)
-    {
-        List<string> groupNames = new List<string>();
-        for (int i = 0; i < count; i++)
-        {
-            groupNames.Add("Group " + (char)('A' + i));
-        }
-        return groupNames;
-    }
-
-    [PunRPC]
-    void AssignToGroupChat(string groupName, string partnerName)
-    {
-        Debug.Log($"RPC Received: Group {groupName}, Partner {partnerName}");
-
-        // Display group assignment to the user
-        Logger.Instance.LogInfo($"You are in {groupName} with {partnerName}");
     }
 }
