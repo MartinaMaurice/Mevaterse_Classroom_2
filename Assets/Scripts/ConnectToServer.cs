@@ -26,6 +26,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 {
     public TMP_InputField nameInputField;
     public TMP_InputField roomNameInputField;
+    public TMP_Dropdown roleDropdown;
 
     public GameObject initialGUI;
     public GameObject loggedGUI;
@@ -70,6 +71,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         loggedGUI.SetActive(false);
         errorMessage.SetActive(false);
 
+        roleDropdown.onValueChanged.AddListener(delegate { OnRoleSelected(); });
         clientButton.onClick.AddListener(ConnectWithRole);
         hostButton.onClick.AddListener(CreateCourseRoom);
         quitButton.onClick.AddListener(() => Application.Quit());
@@ -83,6 +85,11 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         PhotonNetwork.JoinLobby();  // Ensure we are in the lobby to see available rooms
         hostButton.enabled = true;
         clientButton.enabled = true;
+    }
+    private void OnRoleSelected()
+    {
+        selectedRole = roleDropdown.options[roleDropdown.value].text;
+        Debug.Log($"Role selected: {selectedRole}");
     }
 
 
@@ -103,29 +110,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 
         if (selectedRole == "Instructor")
         {
-            Debug.Log($"Attempting to join room with ID: {roomID} as Instructor.");
-
-            // Ensure we are connected to the lobby to access available rooms
-            if (PhotonNetwork.InLobby)
-            {
-                // Check if the course exists in Firestore
-                if (firestoreManager.CourseExistsInFirestore(roomID))
-                {
-                    Debug.Log($"Course found in Firestore, attempting to join room: {roomID}");
-                    // Try to join the room, or create it if it doesn't exist
-                    JoinRoomAsStudent(roomID);
-                }
-                else
-                {
-                    ShowErrorMessage("Course not found in Firestore. Please check the Room ID.");
-                    Debug.LogError("Course not found in Firestore.");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("Not in lobby. Joining lobby...");
-                PhotonNetwork.JoinLobby();  // Ensure we join the lobby before attempting to join a room
-            }
+            courseCreationUI.SetActive(true);
+            Debug.Log("Instructor role selected, showing course creation UI.");
         }
         else if (selectedRole == "Student")
         {
@@ -239,6 +225,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         }
 
         initialGUI.SetActive(false);
+        courseCreationUI.SetActive(false);
 
         loggedGUI.SetActive(true);
 
