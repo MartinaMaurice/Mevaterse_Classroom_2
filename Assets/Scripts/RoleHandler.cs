@@ -16,6 +16,7 @@ public class RoleHandler : MonoBehaviour
     public GameObject debuggingPanel;
     public GameObject toolkitButton;
     public GameObject lectureSelector; // Reference to the LectureSelector GameObject
+  public GameObject idPromptPanel;     // Panel for entering ID
 
     private FirebaseFirestore db;
 
@@ -26,7 +27,7 @@ public class RoleHandler : MonoBehaviour
         debuggingPanel.SetActive(false);
         lectureSelector.SetActive(false); // Default state is inactive
         toolkitButton.SetActive(true); // Always visible
-
+        idPromptPanel.SetActive(false);
         db = FirebaseFirestore.DefaultInstance;
     }
 

@@ -10,16 +10,23 @@ using SFB;
 using System;
 using ExcelDataReader;
 
+using TMPro;
 
 public class InstructorToolkit : MonoBehaviour
 {
     public GameObject toolkitPanel;
     public Button addUserButton;  // New button for adding users from Excel
 
+  public GameObject idPromptPanel;     // Panel for entering ID
+    public TMP_InputField idInputField;  // Input field for entering ID (TextMeshPro)
+    public Button idSubmitButton;        // Button to submit ID
+    public TextMeshProUGUI idFeedbackText; // Text to display feedback (TextMeshPro)
+
     public GameObject initialUI;
     public Button addQuizButton;
     public Button addSlidesButton;
     public Button closeButton;
+    public Button idcloseButton;
 
     public Button closeButtonDeb;
 
@@ -35,46 +42,96 @@ public class InstructorToolkit : MonoBehaviour
 
     public GameObject debuggingPanel;
     public string pythonPath = "C:\\Users\\DaWitchBtch\\AppData\\Local\\Programs\\Python\\Python311\\python.exe";
+    private bool isInstructorVerified = false; // Track if the user has passed ID validation
 
-    void Start()
+     void Start()
     {
+        // Ensure panels are inactive/active based on initialization
         toolkitPanel.SetActive(false);
+        idPromptPanel.SetActive(false);
+        initialUI.SetActive(true);
+
         db = FirebaseFirestore.DefaultInstance;
 
-        addQuizButton.onClick.AddListener(AddQuiz);
-        addSlidesButton.onClick.AddListener(AddSlides);
-        addDebuggingButton.onClick.AddListener(OpenDebuggingPanel);
-
+        // Assign button listeners
+        idSubmitButton.onClick.AddListener(CheckInstructorID);
         closeButton.onClick.AddListener(CloseToolkit);
-        closeButtonDeb.onClick.AddListener(CloseDebuggingPanel);
-
-
-        assignmentButton.onClick.AddListener(() => AddDebuggingMaterial("Assignment"));
-        exerciseButton.onClick.AddListener(() => AddDebuggingMaterial("Exercise"));
-
-        // futureOptionButton.onClick.AddListener(FutureFeature);
-        addUserButton.onClick.AddListener(AddUsersFromExcel);
+        idcloseButton.onClick.AddListener(CloseIdPrompt);
+    }
+  void OpenIDPrompt()
+    {
+        idPromptPanel.SetActive(true);
+        toolkitPanel.SetActive(false);
+        initialUI.SetActive(false);
+        idFeedbackText.text = ""; // Clear any previous feedback
+        UnityDebug.Log("Opened ID prompt panel for validation.");
     }
 
-    public void ToggleToolkit()
+     public void CheckInstructorID()
     {
-        bool isActive = toolkitPanel.activeSelf;
-        if (!isActive)
+        string enteredID = idInputField.text.Trim();
+        if (string.IsNullOrEmpty(enteredID))
         {
+            idFeedbackText.text = "Please enter a valid ID.";
+            UnityDebug.LogError("ID input is empty.");
+            return;
+        }
+
+        db.Collection("users").Document(enteredID).GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        {
+            if (task.IsCompleted && task.Result.Exists)
+            {
+                var snapshot = task.Result;
+                if (snapshot.ContainsField("role"))
+                {
+                    string role = snapshot.GetValue<string>("role");
+                    if (role == "Instructor")
+                    {
+                        UnityDebug.Log("Access granted: Instructor ID verified.");
+                        idFeedbackText.text = "Access granted. Welcome!";
+                        idPromptPanel.SetActive(false);
+                        toolkitPanel.SetActive(true);
+                    }
+                    else
+                    {
+                        UnityDebug.Log("Access denied: Not an instructor.");
+                        idFeedbackText.text = "Access denied. You are not an instructor.";
+                    }
+                }
+                else
+                {
+                    UnityDebug.LogError("Role field missing in user document.");
+                    idFeedbackText.text = "Invalid ID. Role information not found.";
+                }
+            }
+            else
+            {
+                UnityDebug.LogError("ID not found in Firestore.");
+                idFeedbackText.text = "ID not found. Please try again.";
+            }
+        });
+    }
+       public void ToggleToolkit()
+    {
+        if (isInstructorVerified)
+        {
+            // If already verified, directly show the toolkit panel
             toolkitPanel.SetActive(true);
-            initialUI.SetActive(false);  // Hide the initial UI
+            initialUI.SetActive(false);
         }
         else
         {
-            CloseToolkit();
+            // Otherwise, show the ID prompt panel
+            OpenIDPrompt();
         }
     }
-
     void CloseToolkit()
     {
         // Hide the toolkit and return to the initial UI
         toolkitPanel.SetActive(false);
         initialUI.SetActive(true);  // Show the initial UI
+                isInstructorVerified = false; // Reset verification for next time
+ 
     }
 
     void CloseDebuggingPanel()
@@ -82,7 +139,11 @@ public class InstructorToolkit : MonoBehaviour
         debuggingPanel.SetActive(false);
         toolkitPanel.SetActive(true);
     }
-
+     public void CloseIdPrompt()
+    {
+        idPromptPanel.SetActive(false);
+        initialUI.SetActive(true);
+    }
     void AddQuiz()
     {
         UnityDebug.Log("Instructor wants to add a quiz.");
