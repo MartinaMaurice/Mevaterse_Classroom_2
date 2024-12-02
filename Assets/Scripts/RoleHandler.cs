@@ -18,10 +18,10 @@ public class RoleHandler : MonoBehaviour
     public GameObject toolkitButton;
     public GameObject lectureSelector; // Reference to the LectureSelector GameObject
 
-    public LeaderboardManager leaderboardManager; // Reference to the LeaderboardManager in RoleHandler
     private FirebaseFirestore db;
 
-    private string userRole; // To store the role (Instructor or Student)
+    public string userRole; // To store the role (Instructor or Student)
+    public string UserRole { get; private set; }  // or public if you want to access it directly
 
     void Start()
     {
@@ -30,6 +30,8 @@ public class RoleHandler : MonoBehaviour
         toolkitButton.SetActive(true); // Always visible
 
         db = FirebaseFirestore.DefaultInstance;
+        UserRole = "Student"; // or "Student"
+
     }
 
     // Called when the "Connect" button is clicked
@@ -59,7 +61,7 @@ public class RoleHandler : MonoBehaviour
                     {
                         if (hasAccess)
                         {
-                            Debug.Log($"User with role {userRole} validated for the course.");
+                            Debug.Log($"User with role {UserRole} validated for the course.");
 
                             // Enter the room with the user's role
                             EnterRoomWithRole(roomName);
@@ -92,8 +94,8 @@ public class RoleHandler : MonoBehaviour
                 DocumentSnapshot snapshot = task.Result;
                 if (snapshot.Exists && snapshot.ContainsField("role"))
                 {
-                    userRole = snapshot.GetValue<string>("role");
-                    callback(userRole == "Instructor" || userRole == "Student");
+                    UserRole = snapshot.GetValue<string>("role");
+                    callback(UserRole == "Instructor" || UserRole == "Student");
                 }
                 else
                 {
@@ -136,45 +138,25 @@ public class RoleHandler : MonoBehaviour
     }
 
     // Handle entering the room with the user's role
-    private void EnterRoomWithRole(string roomName)
+    // Assuming the 'addButtons' and 'subtractButtons' arrays are populated in the LeaderboardManager
+    public void EnterRoomWithRole(string roomName)
     {
         // Assign role-specific logic
-        if (userRole == "Instructor")
+        if (UserRole == "Instructor")
         {
             Debug.Log("Instructor joining the room.");
             lectureSelector.SetActive(true); // Show lecture selector for instructors
-            foreach (Button button in leaderboardManager.addButtons)
-            {
-                button.gameObject.SetActive(true);
-            }
-            foreach (Button button in leaderboardManager.subtractButtons)
-            {
-                button.gameObject.SetActive(true);
-            }
-
-            // Show search buttons as well
-            leaderboardManager.searchAddButton.gameObject.SetActive(true);
-            leaderboardManager.searchSubtractButton.gameObject.SetActive(true);
         }
-        else if (userRole == "Student")
+        else if (UserRole == "Student")
         {
             Debug.Log("Student joining the room.");
             lectureSelector.SetActive(false); // Hide lecture selector for students
-            foreach (Button button in leaderboardManager.addButtons)
-            {
-                button.gameObject.SetActive(false);
-            }
-            foreach (Button button in leaderboardManager.subtractButtons)
-            {
-                button.gameObject.SetActive(false);
-            }
 
-            // Hide search buttons as well
-            leaderboardManager.searchAddButton.gameObject.SetActive(false);
-            leaderboardManager.searchSubtractButton.gameObject.SetActive(false);
         }
 
         // Join the Photon room
         FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
     }
+
+
 }
