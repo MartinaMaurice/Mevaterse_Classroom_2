@@ -93,7 +93,7 @@ public class TabletManager : MonoBehaviour
     }
     void OpenIDE()
     {
-        if (selectedLectureType == "Exercise")
+        if (selectedLectureType == "Exercise" || selectedLectureType=="Assignment")
         {
             selectionPanel.SetActive(false);
             IDEPanel.SetActive(true);

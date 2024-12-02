@@ -9832,6 +9832,7 @@ MonoBehaviour:
   lectureDropdown: {fileID: 1130234201}
   boardController: {fileID: 4931218027885895238}
   tabletManager: {fileID: 127124354}
+  iDEManager: {fileID: 566600254}
 --- !u!1 &559587804
 GameObject:
   m_ObjectHideFlags: 0
@@ -9995,7 +9996,7 @@ MonoBehaviour:
   runButton: {fileID: 1788208331}
   submitButton: {fileID: 1788208334}
   selectionPanel: {fileID: 420950233}
-  IDEPanel: {fileID: 0}
+  IDEPanel: {fileID: 1788208332}
   tabletManager: {fileID: 127124354}
 --- !u!4 &566600255
 Transform:
@@ -11869,6 +11870,7 @@ MonoBehaviour:
   debuggingPanel: {fileID: 487851549}
   toolkitButton: {fileID: 1207083476}
   lectureSelector: {fileID: 1130234199}
+  leaderboardManager: {fileID: 1741636682}
 --- !u!1 &692985562
 GameObject:
   m_ObjectHideFlags: 0
@@ -46161,11 +46163,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6321931189795870026, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -0.43566132
+      value: -0.43563032
       objectReference: {fileID: 0}
     - target: {fileID: 6321931189795870026, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0.000076293945
+      value: 0.00016784668
       objectReference: {fileID: 0}
     - target: {fileID: 6521471717145108099, guid: dfbfc357c0d001d4889cc318984450ef, type: 3}
       propertyPath: m_AnchorMax.x

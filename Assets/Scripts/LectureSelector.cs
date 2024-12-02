@@ -11,6 +11,8 @@ public class LectureSelector : MonoBehaviour
     public BoardController boardController;  // Reference to the BoardController to load slides on the board
     public TabletManager tabletManager;  // Reference to TabletManager
 
+    public IDEManager iDEManager;
+
 
     private FirebaseFirestore db;
     private string imagesBasePath;
@@ -125,12 +127,14 @@ public class LectureSelector : MonoBehaviour
         else if (selectedItem.StartsWith("Exercise"))
         {
             tabletManager.SetLectureType("Exercise"); // Set lecture type as "Exercise"
+            iDEManager.SetLectureType("Exercise");
             boardController.LoadSlidesForLecture(selectedItem);
             Debug.Log("Exercise selected.");
         }
         else if (selectedItem.StartsWith("Assignment"))
         {
             tabletManager.SetLectureType("Assignment"); // Set lecture type as "Assignment"
+            iDEManager.SetLectureType("Assignment");
             boardController.LoadSlidesForLecture(selectedItem);
             Debug.Log("Assignment selected.");
         }

@@ -3,6 +3,7 @@ using TMPro;
 using Photon.Pun;
 using Firebase.Firestore;
 using Firebase.Extensions;
+using UnityEngine.UI;
 
 public class RoleHandler : MonoBehaviour
 {
@@ -17,6 +18,7 @@ public class RoleHandler : MonoBehaviour
     public GameObject toolkitButton;
     public GameObject lectureSelector; // Reference to the LectureSelector GameObject
 
+    public LeaderboardManager leaderboardManager; // Reference to the LeaderboardManager in RoleHandler
     private FirebaseFirestore db;
 
     private string userRole; // To store the role (Instructor or Student)
@@ -141,11 +143,35 @@ public class RoleHandler : MonoBehaviour
         {
             Debug.Log("Instructor joining the room.");
             lectureSelector.SetActive(true); // Show lecture selector for instructors
+            foreach (Button button in leaderboardManager.addButtons)
+            {
+                button.gameObject.SetActive(true);
+            }
+            foreach (Button button in leaderboardManager.subtractButtons)
+            {
+                button.gameObject.SetActive(true);
+            }
+
+            // Show search buttons as well
+            leaderboardManager.searchAddButton.gameObject.SetActive(true);
+            leaderboardManager.searchSubtractButton.gameObject.SetActive(true);
         }
         else if (userRole == "Student")
         {
             Debug.Log("Student joining the room.");
             lectureSelector.SetActive(false); // Hide lecture selector for students
+            foreach (Button button in leaderboardManager.addButtons)
+            {
+                button.gameObject.SetActive(false);
+            }
+            foreach (Button button in leaderboardManager.subtractButtons)
+            {
+                button.gameObject.SetActive(false);
+            }
+
+            // Hide search buttons as well
+            leaderboardManager.searchAddButton.gameObject.SetActive(false);
+            leaderboardManager.searchSubtractButton.gameObject.SetActive(false);
         }
 
         // Join the Photon room

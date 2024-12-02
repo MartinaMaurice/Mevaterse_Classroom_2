@@ -23,6 +23,9 @@ public class IDEManager : MonoBehaviour
 
     private string serverUrl = "http://localhost:5000/run";  // Use "localhost" explicitly
     private Process serverProcess;
+    private string selectedLectureType; // Stores if selection is "Quiz" or "Exercise"
+    private int exerciseCounter = 1; // Counter for dynamically increasing exercises
+    private int assignmentCounter = 1; // Counter for dynamically increasing assignments
 
     void Start()
     {
@@ -120,20 +123,19 @@ public class IDEManager : MonoBehaviour
         string userCode = codeInputField.text;
         string codeOutput = outputText.text;
         string userId = tabletManager.UserId;
+        string docId = selectedLectureType == "exercise" ? "Exercise" + exerciseCounter++ : "Assignment" + assignmentCounter++;
 
         UnityEngine.Debug.Log("Code and output ready for submission. User ID: " + userId);
 
         // You could use a unique identifier or incrementing ID for each exercise, e.g., Exercise1, Exercise2, etc.
-        string exerciseNumber = "Exercise1"; // Update this as needed for dynamic naming or pass it as a parameter
 
         Dictionary<string, object> codeData = new Dictionary<string, object>
     {
         { "code", userCode },
         { "output", codeOutput }
     };
-
         // Set the code data to the specified exercise number under the "exercises" collection
-        db.Collection("users").Document(userId).Collection("exercises").Document(exerciseNumber)
+        db.Collection("users").Document(userId).Collection(selectedLectureType).Document(docId)
             .SetAsync(codeData, SetOptions.MergeAll)
             .ContinueWithOnMainThread(task =>
             {
@@ -149,5 +151,9 @@ public class IDEManager : MonoBehaviour
 
         IDEPanel.SetActive(false);
         selectionPanel.SetActive(true);
+    }
+    public void SetLectureType(string type)
+    {
+        selectedLectureType = type;
     }
 }

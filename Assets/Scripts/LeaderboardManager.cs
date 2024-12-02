@@ -11,11 +11,11 @@ public class LeaderboardManager : MonoBehaviour
     [SerializeField] private TMP_Dropdown categoryDropdown;
     [SerializeField] private TMP_InputField searchInputField;
     [SerializeField] private TextMeshProUGUI[] rankTexts;
-    [SerializeField] private Button[] addButtons;
-    [SerializeField] private Button[] subtractButtons;
+    [SerializeField] public Button[] addButtons;
+    [SerializeField] public Button[] subtractButtons;
     [SerializeField] private TextMeshProUGUI searchResultText;
-    [SerializeField] private Button searchAddButton;
-    [SerializeField] private Button searchSubtractButton;
+    [SerializeField] public Button searchAddButton;
+    [SerializeField] public Button searchSubtractButton;
 
     private FirebaseFirestore db;
     private string searchStudentId;
