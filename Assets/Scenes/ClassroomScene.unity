@@ -11870,7 +11870,7 @@ MonoBehaviour:
   debuggingPanel: {fileID: 487851549}
   toolkitButton: {fileID: 1207083476}
   lectureSelector: {fileID: 1130234199}
-  leaderboardManager: {fileID: 1741636682}
+  userRole: 
 --- !u!1 &692985562
 GameObject:
   m_ObjectHideFlags: 0

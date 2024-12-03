@@ -22,8 +22,6 @@ public class LeaderboardManager : MonoBehaviour
 
     private List<StudentResult> studentResults = new List<StudentResult>();
 
-    private RoleHandler roleHandler;
-
     private void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -41,8 +39,6 @@ public class LeaderboardManager : MonoBehaviour
         searchSubtractButton.onClick.AddListener(() => AdjustSearchResultScore(-1));
 
         searchInputField.onEndEdit.AddListener(SearchStudentById);
-        CheckUserRole();
-
     }
 
     private void InitializeDropdown()
@@ -83,7 +79,6 @@ public class LeaderboardManager : MonoBehaviour
         DisplayTopStudents(studentResults);
     }
 
-
     private void DisplayTopStudents(List<StudentResult> results)
     {
         results.Sort((a, b) => b.Score.CompareTo(a.Score));
@@ -92,21 +87,10 @@ public class LeaderboardManager : MonoBehaviour
         {
             rankTexts[i].text = $"Rank {i + 1}: {results[i].Name}, Score: {results[i].Score}<3";
             rankTexts[i].gameObject.SetActive(true);
-
-            // Show/Hide Add/Remove buttons based on user role
-            if (roleHandler != null && roleHandler.UserRole == "Instructor")
-            {
-                addButtons[i].gameObject.SetActive(true);
-                subtractButtons[i].gameObject.SetActive(true);
-            }
-            else
-            {
-                addButtons[i].gameObject.SetActive(false);
-                subtractButtons[i].gameObject.SetActive(false);
-            }
+            addButtons[i].gameObject.SetActive(true);
+            subtractButtons[i].gameObject.SetActive(true);
         }
 
-        // Hide buttons if there are fewer students than slots in the leaderboard
         for (int i = results.Count; i < rankTexts.Length; i++)
         {
             rankTexts[i].gameObject.SetActive(false);
@@ -223,22 +207,6 @@ public class LeaderboardManager : MonoBehaviour
                 Debug.LogError("Failed to retrieve document for score adjustment.");
             }
         });
-    }
-    private void CheckUserRole()
-    {
-        // Check if the user role is Instructor or Student from RoleHandler
-        if (roleHandler != null && roleHandler.UserRole != "Instructor")
-        {
-            // Hide buttons if the logged-in user is a student
-            foreach (Button button in addButtons)
-            {
-                button.gameObject.SetActive(false);
-            }
-            foreach (Button button in subtractButtons)
-            {
-                button.gameObject.SetActive(false);
-            }
-        }
     }
 
     private class StudentResult
