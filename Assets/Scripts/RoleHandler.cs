@@ -20,8 +20,7 @@ public class RoleHandler : MonoBehaviour
 
     private FirebaseFirestore db;
 
-    public string userRole; // To store the role (Instructor or Student)
-    public string UserRole { get; private set; }  // or public if you want to access it directly
+    private string userRole; // To store the role (Instructor or Student)
 
     void Start()
     {
@@ -30,8 +29,6 @@ public class RoleHandler : MonoBehaviour
         toolkitButton.SetActive(true); // Always visible
 
         db = FirebaseFirestore.DefaultInstance;
-        UserRole = "Student"; // or "Student"
-
     }
 
     // Called when the "Connect" button is clicked
@@ -61,7 +58,7 @@ public class RoleHandler : MonoBehaviour
                     {
                         if (hasAccess)
                         {
-                            Debug.Log($"User with role {UserRole} validated for the course.");
+                            Debug.Log($"User with role {userRole} validated for the course.");
 
                             // Enter the room with the user's role
                             EnterRoomWithRole(roomName);
@@ -94,8 +91,8 @@ public class RoleHandler : MonoBehaviour
                 DocumentSnapshot snapshot = task.Result;
                 if (snapshot.Exists && snapshot.ContainsField("role"))
                 {
-                    UserRole = snapshot.GetValue<string>("role");
-                    callback(UserRole == "Instructor" || UserRole == "Student");
+                    userRole = snapshot.GetValue<string>("role");
+                    callback(userRole == "Instructor" || userRole == "Student");
                 }
                 else
                 {
@@ -142,12 +139,12 @@ public class RoleHandler : MonoBehaviour
     public void EnterRoomWithRole(string roomName)
     {
         // Assign role-specific logic
-        if (UserRole == "Instructor")
+        if (userRole == "Instructor")
         {
             Debug.Log("Instructor joining the room.");
             lectureSelector.SetActive(true); // Show lecture selector for instructors
         }
-        else if (UserRole == "Student")
+        else if (userRole == "Student")
         {
             Debug.Log("Student joining the room.");
             lectureSelector.SetActive(false); // Hide lecture selector for students
@@ -157,6 +154,5 @@ public class RoleHandler : MonoBehaviour
         // Join the Photon room
         FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
     }
-
 
 }
