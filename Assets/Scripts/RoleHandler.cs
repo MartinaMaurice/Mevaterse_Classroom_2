@@ -19,8 +19,8 @@ public class RoleHandler : MonoBehaviour
     public GameObject lectureSelector; // Reference to the LectureSelector GameObject
 
     private FirebaseFirestore db;
-
     private string userRole; // To store the role (Instructor or Student)
+    private string userId;   // Store the validated userId
 
     void Start()
     {
@@ -36,7 +36,7 @@ public class RoleHandler : MonoBehaviour
     {
         string playerName = playerNameInput.text;
         string roomName = roomNameInput.text;
-        string userId = userIdInput.text;
+        userId = userIdInput.text;
         string courseId = courseIdInput.text;
 
         PhotonNetwork.NickName = playerName;
@@ -53,12 +53,18 @@ public class RoleHandler : MonoBehaviour
             {
                 if (isValid)
                 {
-                    // Validate access for both roles (role-specific logic inside this callback)
                     ValidateUserAccess(userId, courseId, hasAccess =>
                     {
                         if (hasAccess)
                         {
                             Debug.Log($"User with role {userRole} validated for the course.");
+
+                            // Notify LeaderboardManager about the role
+                            LeaderboardManager leaderboardManager = FindObjectOfType<LeaderboardManager>();
+                            if (leaderboardManager != null)
+                            {
+                                leaderboardManager.SetUserRole(userRole);
+                            }
 
                             // Enter the room with the user's role
                             EnterRoomWithRole(roomName);
@@ -119,7 +125,7 @@ public class RoleHandler : MonoBehaviour
                 if (snapshot.Exists && snapshot.ContainsField("course_id"))
                 {
                     string storedCourseId = snapshot.GetValue<string>("course_id");
-                    callback(string.IsNullOrEmpty(courseId) || storedCourseId == courseId); // Allow all if no course is specified
+                    callback(string.IsNullOrEmpty(courseId) || storedCourseId == courseId);
                 }
                 else
                 {
@@ -134,25 +140,19 @@ public class RoleHandler : MonoBehaviour
         });
     }
 
-    // Handle entering the room with the user's role
-    // Assuming the 'addButtons' and 'subtractButtons' arrays are populated in the LeaderboardManager
     public void EnterRoomWithRole(string roomName)
     {
-        // Assign role-specific logic
         if (userRole == "Instructor")
         {
             Debug.Log("Instructor joining the room.");
-            lectureSelector.SetActive(true); // Show lecture selector for instructors
+            lectureSelector.SetActive(true);
         }
         else if (userRole == "Student")
         {
             Debug.Log("Student joining the room.");
-            lectureSelector.SetActive(false); // Hide lecture selector for students
-
+            lectureSelector.SetActive(false);
         }
 
-        // Join the Photon room
         FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
     }
-
 }

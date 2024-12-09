@@ -1,0 +1,260 @@
+*****************************
+***********SYSTEM************
+*****************************
+Unity Version:2021.3.22f1
+OS:Windows 11  (10.0.22631) 64bit
+System Time: 12/9/2024 10:17:10 PM
+
+*****************************
+***********PROJECT***********
+*****************************
+Scripting Define Symbols: PHOTON_UNITY_NETWORKING;PUN_2_0_OR_NEWER;PUN_2_OR_NEWER;PUN_2_19_OR_NEWER;C3D_DEFAULT;C3D_PHOTON;C3D_NETCODE;C3D_NORMCORE
+Packages:
+  com.cognitive3d.c3d-sdk 1.6.5
+  com.unity.feature.development 1.0.1
+  com.unity.ide.rider 3.0.18
+  com.unity.ide.visualstudio 2.0.17
+  com.unity.ide.vscode 1.2.5
+  com.unity.inputsystem 1.5.1
+  com.unity.test-framework 1.1.31
+  com.unity.textmeshpro 3.0.6
+  com.unity.timeline 1.6.4
+  com.unity.ugui 1.0.0
+  com.unity.visualscripting 1.8.0
+  com.unity.modules.ai 1.0.0
+  com.unity.modules.androidjni 1.0.0
+  com.unity.modules.animation 1.0.0
+  com.unity.modules.assetbundle 1.0.0
+  com.unity.modules.audio 1.0.0
+  com.unity.modules.cloth 1.0.0
+  com.unity.modules.director 1.0.0
+  com.unity.modules.imageconversion 1.0.0
+  com.unity.modules.imgui 1.0.0
+  com.unity.modules.jsonserialize 1.0.0
+  com.unity.modules.particlesystem 1.0.0
+  com.unity.modules.physics 1.0.0
+  com.unity.modules.physics2d 1.0.0
+  com.unity.modules.screencapture 1.0.0
+  com.unity.modules.terrain 1.0.0
+  com.unity.modules.terrainphysics 1.0.0
+  com.unity.modules.tilemap 1.0.0
+  com.unity.modules.ui 1.0.0
+  com.unity.modules.uielements 1.0.0
+  com.unity.modules.umbra 1.0.0
+  com.unity.modules.unityanalytics 1.0.0
+  com.unity.modules.unitywebrequest 1.0.0
+  com.unity.modules.unitywebrequestassetbundle 1.0.0
+  com.unity.modules.unitywebrequestaudio 1.0.0
+  com.unity.modules.unitywebrequesttexture 1.0.0
+  com.unity.modules.unitywebrequestwww 1.0.0
+  com.unity.modules.vehicles 1.0.0
+  com.unity.modules.video 1.0.0
+  com.unity.modules.vr 1.0.0
+  com.unity.modules.wind 1.0.0
+  com.unity.modules.xr 1.0.0
+SDK Version: 1.6.5
+Api Key: ****GHDR
+Developer Key: ****X43B
+Enable Logging: True
+Enable Development Logging: False
+Gaze Type: Physics
+Snapshot Interval: 0.1
+Dynamic Object Search in Parent: True
+Dynamic Object Layer Mask: -1
+Track GPS Location: False
+GPS Accuracy: 2
+Record Floor Position: True
+Automatic Send Timer: 10
+Gaze Snapshot Batch Size: 256
+Event Snapshot Batch Size: 256
+Dynamic Snapshot Batch Size: 512
+Sensor Snapshot Batch Size: 512
+Fixation Snapshot Batch Size: 256
+Save Data to Local Cache if no internet connection: True
+Cache Size (bytes): 104857600
+Cache Size (mb): 100.0 MB
+Custom Protocol: https
+Custom Gateway: data.cognitive3d.com
+Custom Viewer: viewer.cognitive3d.com/scene/
+Custom Dashboard: app.cognitive3d.com
+Texture Export Quality: 2
+Export Lowest LOD from LODGroup Components: True
+Scene Settings:
+  └─ClassroomScene
+     ├─Scene Id: 
+     ├─Scene Path: Assets/Scenes/ClassroomScene.unity
+     ├─Last Revision: 
+     ├─Version Number: 0
+     └─Version Id: 0
+
+*****************************
+********CURRENT SCENE********
+*****************************
+Scene Name: ClassroomScene
+Scene Id: 
+Scene Path: Assets/Scenes/ClassroomScene.unity
+Last Revision: 
+Version Number: 0
+Version Id: 0
+Scene Size (mb): 38.80
+Main Camera GameObject: Main Camera
+Manager Initialize On Start: True
+Manager Startup Delay Time (s): 0
+
+*****************************
+****CURRENT SCENE OBJECTS****
+*****************************
+Dynamic Object Count: 2
+  ├─RightController
+  │  ├─Mesh Name: rightcontroller
+  │  ├─Has Collider: false
+  │  └─Has Children: false
+  └─LeftController
+     ├─Mesh Name: leftcontroller
+     ├─Has Collider: false
+     └─Has Children: false
+
+*****************************
+********EXPORT FOLDER********
+*****************************
+/Cognitive3D_SceneExplorerExport (39mb)
+   /ClassroomScene (38.80mb)
+      1049536307upper_molding_MetallicMetallicGloss.png (0.02mb)
+      10495473Substance_Graph_BaseColor1Main.png (0.40mb)
+      1131047002molding_Normal_OpenGLBump.png (0.04mb)
+      1149878351door_props_Normal_OpenGLBump.png (0.55mb)
+      1165617847door_props_Base_colorMain.png (1.08mb)
+      1190110014wall_material_normalMain.png (1.32mb)
+      1291045021upper_molding_Normal_OpenGLBump.png (0.50mb)
+      133731243air_con_MetallicMetallicGloss.png (0.02mb)
+      1447541919door_props_MetallicMetallicGloss.png (0.06mb)
+      1478126408Wood_Plywood_Front_001_normalBump.png (0.16mb)
+      1522348555Wall_Plaster_001_basecolorMain.png (0.47mb)
+      152604523Plastic_004_normalBump.png (0.51mb)
+      1548418072Wall_Plaster_001_normalBump.png (0.50mb)
+      167644448molding_Base_colorMain.png (0.02mb)
+      174772365Substance_Graph_NormalBump.png (0.25mb)
+      1972369604white_board_Normal_OpenGLBump.png (0.56mb)
+      201541965air_con_Normal_OpenGLBump.png (0.17mb)
+      2027133911ceiling_MetallicMetallicGloss.png (0.02mb)
+      2034423607blind_MetallicMetallicGloss.png (0.02mb)
+      2088995473ceiling_Base_colorMain.png (0.04mb)
+      2116188318fireplug_Base_colorMain.png (0.22mb)
+      2117517366fireplug_MetallicMetallicGloss.png (0.02mb)
+      248225837pillars_Normal_OpenGLBump.png (0.93mb)
+      250566181pillars_Base_colorMain.png (0.84mb)
+      25240618Plastic_004_basecolorMain.png (0.40mb)
+      356115147blind_Normal_OpenGLBump.png (1.41mb)
+      37185715024004Main.png (0.00mb)
+      37185715024052Main.png (0.00mb)
+      37185715024088Main.png (0.00mb)
+      37185715024142Main.png (0.00mb)
+      37185715024192Main.png (0.00mb)
+      37185715024286Main.png (0.00mb)
+      37185715024338Main.png (0.00mb)
+      37185715024384Main.png (0.00mb)
+      37185715024606Main.png (0.00mb)
+      37185715024724Main.png (0.00mb)
+      37185715024842Main.png (0.00mb)
+      37185715025108Main.png (0.00mb)
+      37185715025112Main.png (0.00mb)
+      37185715025168Main.png (0.00mb)
+      37185715025346Main.png (0.00mb)
+      37185715025356Main.png (0.00mb)
+      37185715025374Main.png (0.00mb)
+      37185715025378Main.png (0.00mb)
+      37185715025394Main.png (0.00mb)
+      37185715025480Main.png (0.00mb)
+      37185715025564Main.png (0.00mb)
+      37185715025596Main.png (0.00mb)
+      37185715025630Main.png (0.00mb)
+      37185715025718Main.png (0.00mb)
+      37185715025896Main.png (0.00mb)
+      37185715025926Main.png (0.00mb)
+      37185715026018Main.png (0.00mb)
+      37185715026050Main.png (0.00mb)
+      37185715026064Main.png (0.00mb)
+      37185715026106Main.png (0.00mb)
+      37185715026592Main.png (0.00mb)
+      37185715026668Main.png (0.00mb)
+      37185715026674Main.png (0.00mb)
+      37185715026682Main.png (0.00mb)
+      37185715026728Main.png (0.00mb)
+      37185715026856Main.png (0.00mb)
+      37185715026966Main.png (0.00mb)
+      37185715026982Main.png (0.00mb)
+      37185715027014Main.png (0.00mb)
+      37185715027068Main.png (0.00mb)
+      37185715027208Main.png (0.00mb)
+      37185715027326Main.png (0.00mb)
+      37185715027500Main.png (0.00mb)
+      37185715027560Main.png (0.00mb)
+      37185715027604Main.png (0.00mb)
+      37185715027676Main.png (0.00mb)
+      37185715027788Main.png (0.00mb)
+      37185715027850Main.png (0.00mb)
+      37185715027910Main.png (0.00mb)
+      37185715027956Main.png (0.00mb)
+      37185715028026Main.png (0.00mb)
+      37185715028042Main.png (0.00mb)
+      37185715028132Main.png (0.00mb)
+      37185715028174Main.png (0.00mb)
+      37185715028192Main.png (0.00mb)
+      37185715028324Main.png (0.00mb)
+      37185715028330Main.png (0.00mb)
+      37185715028362Main.png (0.00mb)
+      37185715028436Main.png (0.00mb)
+      37185715028440Main.png (0.00mb)
+      37185715028554Main.png (0.00mb)
+      37185715028586Main.png (0.00mb)
+      37185715028900Main.png (0.00mb)
+      37185715028918Main.png (0.00mb)
+      37185715028966Main.png (0.00mb)
+      37185715029124Main.png (0.00mb)
+      37185715029394Main.png (0.00mb)
+      37185715029450Main.png (0.00mb)
+      37185715029462Main.png (0.00mb)
+      37185715029550Main.png (0.00mb)
+      37185715029556Main.png (0.00mb)
+      37185715029732Main.png (0.00mb)
+      37185715029738Main.png (0.00mb)
+      37185715029938Main.png (0.00mb)
+      37185715030022Main.png (0.00mb)
+      37185715030042Main.png (0.00mb)
+      37185715030084Main.png (0.00mb)
+      37185715030288Main.png (0.00mb)
+      37185715030462Main.png (0.00mb)
+      37185715030636Main.png (0.00mb)
+      37185715030758Main.png (0.00mb)
+      37185715030964Main.png (0.00mb)
+      37185715031088Main.png (0.00mb)
+      37185715031156Main.png (0.00mb)
+      37185715031190Main.png (0.00mb)
+      37185715031370Main.png (0.00mb)
+      37185715031450Main.png (0.00mb)
+      37185715031458Main.png (0.00mb)
+      37185715031594Main.png (0.00mb)
+      37185715031608Main.png (0.00mb)
+      37185715031754Main.png (0.00mb)
+      37185715031768Main.png (0.00mb)
+      37185715031812Main.png (0.00mb)
+      37185715031928Main.png (0.00mb)
+      37185715032034Main.png (0.00mb)
+      37185715032042Main.png (0.00mb)
+      37185715032068Main.png (0.00mb)
+      37185715032248Main.png (0.00mb)
+      37185715032326Main.png (0.00mb)
+      373050959power_socket_MetallicMain.png (0.02mb)
+      373050959power_socket_MetallicMetallicGloss.png (0.02mb)
+      39901139air_con_Base_colorMain.png (0.03mb)
+      412436169Wood_Plywood_Front_001_basecolorMain.png (0.45mb)
+      520291544molding_MetallicMetallicGloss.png (0.02mb)
+      528008625pillars_MetallicMetallicGloss.png (0.11mb)
+      609768080fireplug_Normal_OpenGLBump.png (0.74mb)
+      816016171upper_molding_Base_colorMain.png (1.00mb)
+      874300451blind_Base_colorMain.png (0.33mb)
+      919098987power_socket_Normal_OpenGLBump.png (0.06mb)
+      996527834white_board_Base_colorMain.png (1.05mb)
+      scene.bin (22.93mb)
+      scene.gltf (1.11mb)
+      settings.json (0.00mb)

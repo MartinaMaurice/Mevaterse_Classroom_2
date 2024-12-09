@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using Firebase.Firestore;
 using Firebase.Extensions;
+using Photon.Pun; // Photon Library
 
 public class TabletManager : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class TabletManager : MonoBehaviour
     [SerializeField] private Button[] answerButtons;
     [SerializeField] private TextMeshProUGUI scoreText; // Text element to display the final score
     [SerializeField] private Button submitButton; // Reference to the submit button
+    [SerializeField] private GameObject[] allTablets; // Array of all tablets in the network
 
     private FirebaseFirestore db;
     private string userId;
@@ -27,10 +29,15 @@ public class TabletManager : MonoBehaviour
     private int score = 0; // Tracks the score/grade
     private string selectedQuizId;
     private string selectedLectureType; // Stores if selection is "Quiz" or "Exercise"
+    private bool isInstructor = false;  // To track if the user is an instructor or student
+
+    private TabletNetworkManager tabletNetworkManager;  // Reference to the TabletNetworkManager
 
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
+                tabletNetworkManager = FindObjectOfType<TabletNetworkManager>();  // Get the TabletNetworkManager
+
         quizPanel.SetActive(false);
         userIDPanel.SetActive(true);
         scoreText.gameObject.SetActive(false); // Hide score text initially
@@ -55,6 +62,37 @@ public class TabletManager : MonoBehaviour
     public void SetQuizId(string quizId)
     {
         selectedQuizId = quizId;
+    }
+
+        void SyncTabletVisibility(bool isInstructor)
+    {
+        // Check if the user is an instructor or student
+        if (isInstructor)
+        {
+            // Instructors can see all tablets
+            Debug.Log("Instructor entered. Allow all tablets to be visible.");
+            // Enable any specific UI elements for the instructor here
+        }
+        else
+        {
+            // Hide all tablets except the current one for the student
+            Debug.Log("Student entered. Hiding other tablets.");
+            // Hide other tablets (e.g., by setting them inactive)
+            HideOtherTablets();
+        }
+    }
+
+    void HideOtherTablets()
+    {
+        // Iterate through all tablets and disable the ones that do not belong to the current user
+        foreach (GameObject tablet in allTablets)
+        {
+            TabletManager tabletManager = tablet.GetComponent<TabletManager>();
+            if (tabletManager != null && tabletManager.UserId != userId)
+            {
+                tablet.SetActive(false); // Disable tablet if it's not the current user's tablet
+            }
+        }
     }
 
     public void SetLectureType(string type)
@@ -84,6 +122,13 @@ public class TabletManager : MonoBehaviour
                 Debug.Log("User exists.");
                 userIDPanel.SetActive(false);
                 selectionPanel.SetActive(true); // Show selection panel after validating user
+                                 
+            
+              if (tabletNetworkManager != null)
+                {
+                    tabletNetworkManager.HideOtherTablets(userId);
+                }
+
             }
             else
             {
