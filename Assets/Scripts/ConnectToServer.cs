@@ -6,6 +6,7 @@ using Photon.Realtime;
 using UnityEngine.SceneManagement;
 using ExitGames.Client.Photon;
 using System.Collections.Generic;
+using System;
 
 
 public static class SerializableColor
@@ -47,6 +48,12 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private FirestoreManager firestoreManager;
 
 
+public event Action<string, string> OnActionTriggered;
+
+   private void TriggerAction(string actionName)
+    {
+        OnActionTriggered?.Invoke(this.GetType().Name, actionName);
+    }
 
     void Start()
     {
@@ -79,6 +86,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         Debug.Log("Connected to Photon Master Server");
         PhotonNetwork.JoinLobby();  // Ensure we are in the lobby to see available rooms
         clientButton.enabled = true;
+                TriggerAction("Connect Clicked");
+
     }
     // private void OnRoleSelected()
     // {
@@ -164,6 +173,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
 
         PhotonNetwork.CreateRoom(roomID, roomOptions);
         Debug.Log($"Room {roomID} created.");
+                TriggerAction("Room created");
+
     }
     private void JoinRoomAsStudent(string roomID)
     {

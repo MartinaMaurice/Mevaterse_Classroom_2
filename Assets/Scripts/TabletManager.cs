@@ -5,6 +5,7 @@ using TMPro;
 using Firebase.Firestore;
 using Firebase.Extensions;
 using Photon.Pun; // Photon Library
+using System;
 
 public class TabletManager : MonoBehaviour
 {
@@ -23,7 +24,9 @@ public class TabletManager : MonoBehaviour
     [SerializeField] private GameObject[] allTablets; // Array of all tablets in the network
 
     private FirebaseFirestore db;
-    private string userId;
+     private string userId; // Field for storing the User ID
+    public string UserId => userId; // Public property to access the User ID
+
     private List<Dictionary<string, object>> questions;
     private int currentQuestionIndex = 0;
     private int score = 0; // Tracks the score/grade
@@ -33,6 +36,12 @@ public class TabletManager : MonoBehaviour
 
     private TabletNetworkManager tabletNetworkManager;  // Reference to the TabletNetworkManager
 
+public event Action<string, string> OnActionTriggered;
+
+    private void TriggerAction(string actionName)
+    {
+        OnActionTriggered?.Invoke(this.GetType().Name, actionName);
+    }
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -49,9 +58,13 @@ public class TabletManager : MonoBehaviour
         QuizButton.onClick.AddListener(OpenQuiz);
         CloseButton.onClick.AddListener(ClosePanel);
     }
-    public string UserId
+    
+
+
+      public void AssignUser(string userId)
     {
-        get { return userId; }
+        this.userId = userId;
+        Debug.Log($"Tablet {gameObject.name} assigned to user {userId}.");
     }
 
     public void ClosePanel()
@@ -106,6 +119,8 @@ public class TabletManager : MonoBehaviour
         if (!string.IsNullOrEmpty(userId))
         {
             ValidateUserID(userId);
+                    TriggerAction("Id validation");
+
         }
         else
         {
@@ -144,6 +159,8 @@ public class TabletManager : MonoBehaviour
             IDEPanel.SetActive(true);
             quizPanel.SetActive(false);
             Debug.Log("IDE Panel opened.");
+             TriggerAction("IDE opened");
+
         }
         else
         {
@@ -160,6 +177,8 @@ public class TabletManager : MonoBehaviour
             IDEPanel.SetActive(false);
             LoadQuizFromFirestore(selectedQuizId);
             Debug.Log("Quiz Panel opened.");
+                    TriggerAction("quiz opened");
+
         }
         else
         {
@@ -303,6 +322,8 @@ public class TabletManager : MonoBehaviour
         submitButton.onClick.AddListener(ExitQuiz);
 
         SaveQuizResults(); // Save the quiz results to Firestore
+                TriggerAction("end Quiz");
+
     }
 
     void ExitQuiz()
