@@ -26,13 +26,13 @@ public class StatisticsManager : MonoBehaviour
         sessionStartTime = DateTime.Now;
 
         // Hook into events from managers
-        foreach (var tabletManager in tabletManagers)
-        {
-            if (tabletManager != null)
-            {
-                tabletManager.OnActionTriggered += LogAction;
-            }
-        }
+        // foreach (var tabletManager in tabletManagers)
+        // {
+        //     if (tabletManager != null)
+        //     {
+        //         tabletManager.OnActionTriggered += LogAction;
+        //     }
+        // }
 
         if (leaderboardManager != null)
         {

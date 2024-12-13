@@ -51,7 +51,6 @@ public class LectureSelector : MonoBehaviour
         // Set the dropdown's value change event
         lectureDropdown.onValueChanged.AddListener(delegate { OnLectureSelected(lectureDropdown); });
     }
-
     List<string> GetLocalFolderNames()
     {
         List<string> folderNames = new List<string>();
@@ -78,28 +77,30 @@ public class LectureSelector : MonoBehaviour
         return folderNames;
     }
 
-    async Task FetchQuizTitlesFromFirestore()
+      async Task FetchQuizTitlesFromFirestore()
     {
         // Fetch quizzes from Firestore
         QuerySnapshot quizSnapshot = await db.Collection("quizzes").GetSnapshotAsync();
 
-        int quizNumber = 1;
+        quizTitles.Clear();
+        quizIds.Clear();
+
         foreach (DocumentSnapshot document in quizSnapshot.Documents)
         {
             if (document.Exists)
             {
-                // Create a user-friendly title for display in the dropdown
-                string quizTitle = $"Quiz {quizNumber}";
-
-                // Add title and ID to separate lists
+                // Use document ID as the quiz identifier
+                string quizTitle = document.ContainsField("title") ? document.GetValue<string>("title") : $"Quiz {quizTitles.Count + 1}";
                 quizTitles.Add(quizTitle);
                 quizIds.Add(document.Id);
-
-                quizNumber++;
             }
         }
-    }
 
+        if (quizTitles.Count == 0)
+        {
+            Debug.LogWarning("No quizzes found in Firestore.");
+        }
+    }
     void OnLectureSelected(TMP_Dropdown dropdown)
     {
         string selectedItem = dropdown.options[dropdown.value].text;

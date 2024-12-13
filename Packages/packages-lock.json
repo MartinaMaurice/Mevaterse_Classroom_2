@@ -1,15 +1,5 @@
 {
   "dependencies": {
-    "com.cognitive3d.c3d-sdk": {
-      "version": "https://github.com/CognitiveVR/cvr-sdk-unity.git",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {
-        "com.unity.xr.legacyinputhelpers": "2.1.7",
-        "com.unity.xr.management": "4.2.1"
-      },
-      "hash": "7d6eab916eba17dfb795c4a4284a741f1ee5d702"
-    },
     "com.unity.editorcoroutines": {
       "version": "1.0.0",
       "depth": 1,
@@ -86,15 +76,6 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
-    "com.unity.subsystemregistration": {
-      "version": "1.1.0",
-      "depth": 2,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.modules.subsystems": "1.0.0"
-      },
-      "url": "https://packages.unity.com"
-    },
     "com.unity.test-framework": {
       "version": "1.1.31",
       "depth": 0,
@@ -153,29 +134,6 @@
       "dependencies": {
         "com.unity.ugui": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0"
-      },
-      "url": "https://packages.unity.com"
-    },
-    "com.unity.xr.legacyinputhelpers": {
-      "version": "2.1.10",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.modules.vr": "1.0.0",
-        "com.unity.modules.xr": "1.0.0"
-      },
-      "url": "https://packages.unity.com"
-    },
-    "com.unity.xr.management": {
-      "version": "4.2.1",
-      "depth": 1,
-      "source": "registry",
-      "dependencies": {
-        "com.unity.modules.vr": "1.0.0",
-        "com.unity.modules.xr": "1.0.0",
-        "com.unity.modules.subsystems": "1.0.0",
-        "com.unity.subsystemregistration": "1.0.6",
-        "com.unity.xr.legacyinputhelpers": "2.1.7"
       },
       "url": "https://packages.unity.com"
     },
