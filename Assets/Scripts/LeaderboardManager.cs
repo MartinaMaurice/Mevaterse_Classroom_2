@@ -8,7 +8,6 @@ using System;
 
 public class LeaderboardManager : MonoBehaviour
 {
-     [SerializeField] private StatisticsManager statisticsManager;
 
     [SerializeField] private TMP_Dropdown categoryDropdown;
     [SerializeField] private TMP_InputField searchInputField;
@@ -24,12 +23,8 @@ public class LeaderboardManager : MonoBehaviour
     private List<StudentResult> studentResults = new List<StudentResult>();
     private string userRole = "Student"; // Default role
 
-public event Action<string, string> OnActionTriggered;
 
-   private void TriggerAction(string actionName)
-    {
-        OnActionTriggered?.Invoke(this.GetType().Name, actionName);
-    }
+
     
    private void Start()
     {
@@ -89,7 +84,7 @@ public event Action<string, string> OnActionTriggered;
         {
             FetchTopStudents();
         }
-                TriggerAction("Leadership board opened");
+
 
     }
 
@@ -279,7 +274,7 @@ public event Action<string, string> OnActionTriggered;
             searchSubtractButton.gameObject.SetActive(false);
         }
     });
-            TriggerAction("Search Input Entered");
+
 
 }
 

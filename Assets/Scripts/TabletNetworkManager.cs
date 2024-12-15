@@ -6,7 +6,6 @@ public class TabletNetworkManager : MonoBehaviour
 {
     [SerializeField] private GameObject[] allTablets;
 
-    public event Action<string, string> OnTabletActionTriggered;
 
     public void HideOtherTablets(string userId)
     {
@@ -20,9 +19,5 @@ public class TabletNetworkManager : MonoBehaviour
         }
     }
 
-    private void TriggerAction(string actionName, string details)
-    {
-        OnTabletActionTriggered?.Invoke(this.GetType().Name, actionName);
-        Debug.Log($"Action Triggered: {actionName}, Details: {details}");
-    }
+  
 }

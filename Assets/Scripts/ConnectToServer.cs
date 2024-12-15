@@ -48,13 +48,8 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private FirestoreManager firestoreManager;
 
 
-public event Action<string, string> OnActionTriggered;
 
-   private void TriggerAction(string actionName)
-    {
-        OnActionTriggered?.Invoke(this.GetType().Name, actionName);
-    }
-
+   
     void Start()
     {
         PhotonCustomTypes.RegisterCustomTypes();
@@ -86,7 +81,7 @@ public event Action<string, string> OnActionTriggered;
         Debug.Log("Connected to Photon Master Server");
         PhotonNetwork.JoinLobby();  // Ensure we are in the lobby to see available rooms
         clientButton.enabled = true;
-                TriggerAction("Connect Clicked");
+
 
     }
     // private void OnRoleSelected()
@@ -173,7 +168,7 @@ public event Action<string, string> OnActionTriggered;
 
         PhotonNetwork.CreateRoom(roomID, roomOptions);
         Debug.Log($"Room {roomID} created.");
-                TriggerAction("Room created");
+
 
     }
     private void JoinRoomAsStudent(string roomID)
