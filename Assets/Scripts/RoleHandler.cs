@@ -91,6 +91,10 @@ public class RoleHandler : MonoBehaviour
             if (task.Result.Exists && task.Result.ContainsField("role"))
             {
                 userRole = task.Result.GetValue<string>("role");
+
+                // Set the user role in RoleManager
+                RoleManager.Instance.SetRole(userId, userRole);
+
                 callback(userRole == "Instructor" || userRole == "Student");
             }
             else

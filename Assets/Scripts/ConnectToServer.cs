@@ -46,13 +46,16 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private bool isRejoining = false;
     private CourseManager courseManager = new CourseManager();  // Initialize CourseManager
     private FirestoreManager firestoreManager;
+private ActivityStatsManager statsManager;
 
+private string userId;  // Holds the User ID
 
 
    
     void Start()
     {
         PhotonCustomTypes.RegisterCustomTypes();
+    statsManager = FindObjectOfType<ActivityStatsManager>();
 
         firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
 
@@ -102,6 +105,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
             Debug.LogError("Player name or room ID is missing.");
             return;
         }
+        userId = playerName;  // Set userId from playerName input field
 
         PhotonNetwork.NickName = playerName;
         Debug.Log($"Attempting to connect with role: {selectedRole}.");
@@ -211,6 +215,7 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     public override void OnJoinedRoom()
     {
         Debug.Log($"Successfully joined room: {PhotonNetwork.CurrentRoom.Name}");
+  statsManager.IncrementActivity("joined a room");
 
         Hashtable roomProperties = PhotonNetwork.CurrentRoom.CustomProperties;
         if (roomProperties.TryGetValue("CourseName", out object courseName) &&
@@ -276,18 +281,27 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
         ResetUI();
     }
 
-    public void LeaveRoom()
+   public void LeaveRoom()
+{
+    if (PhotonNetwork.InRoom)
     {
-        if (PhotonNetwork.InRoom)
+        PhotonNetwork.LeaveRoom();  // Leave the room properly
+        isRejoining = true;  // Set flag to rejoin lobby after leaving
+
+        if (!string.IsNullOrEmpty(userId))  // Ensure userId is set
         {
-            PhotonNetwork.LeaveRoom();  // Leave the room properly
-            isRejoining = true;  // Set flag to rejoin lobby after leaving
+            statsManager.SaveStatistics(userId);
         }
         else
         {
-            ResetUI();
+            Debug.LogWarning("User ID is not set. Statistics not saved.");
         }
     }
+    else
+    {
+        ResetUI();
+    }
+}
 
     private void ResetUI()
     {

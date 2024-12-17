@@ -20,17 +20,21 @@ public class LeaderboardManager : MonoBehaviour
 
       private FirebaseFirestore db;
     private string searchStudentId;
-    private List<StudentResult> studentResults = new List<StudentResult>();
+        private string userId; // User ID
+private ActivityStatsManager statsManager;
+
     private string userRole = "Student"; // Default role
 
+    private List<StudentResult> studentResults = new List<StudentResult>();
 
 
     
-   private void Start()
+     private void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
 
         InitializeDropdown();
+    statsManager = FindObjectOfType<ActivityStatsManager>();
 
         for (int i = 0; i < addButtons.Length; i++)
         {
@@ -43,7 +47,21 @@ public class LeaderboardManager : MonoBehaviour
         searchSubtractButton.onClick.AddListener(() => AdjustSearchResultScore(-1));
 
         searchInputField.onEndEdit.AddListener(SearchStudentById);
+
+        // Get userId from PlayerPrefs and fetch role from RoleManager
+        userId = PlayerPrefs.GetString("UserID", null);
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogError("User ID not found.");
+            return;
+        }
+
+        userRole = RoleManager.Instance.GetRole(userId);
+        Debug.Log($"LeaderboardManager: Role for UserID {userId} is {userRole}");
+
+        UpdateButtonVisibility();
     }
+
       public void SetUserRole(string role)
     {
         userRole = role;
@@ -66,6 +84,8 @@ public class LeaderboardManager : MonoBehaviour
 
         if (searchAddButton != null) searchAddButton.gameObject.SetActive(isInstructor);
         if (searchSubtractButton != null) searchSubtractButton.gameObject.SetActive(isInstructor);
+
+        Debug.Log($"Button visibility updated. Is Instructor: {isInstructor}");
     }
 
     private void InitializeDropdown()
@@ -79,6 +99,8 @@ public class LeaderboardManager : MonoBehaviour
     private void OnCategorySelected(int index)
     {
         string selectedCategory = categoryDropdown.options[index].text;
+
+    statsManager.IncrementActivity("Leaderboard_opened");
 
         if (selectedCategory == "Total Score")
         {
@@ -209,7 +231,7 @@ public class LeaderboardManager : MonoBehaviour
         }
 
         string studentId = studentResults[index].Id;
-
+  statsManager.IncrementActivity("Score_Adjusted");
         DocumentReference userDocRef = db.Collection("users").Document(studentId);
         userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
@@ -244,7 +266,7 @@ public class LeaderboardManager : MonoBehaviour
         Debug.LogWarning("Search input is empty.");
         return;
     }
-
+  statsManager.IncrementActivity("search used in leaderboard");
     DocumentReference userDocRef = db.Collection("users").Document(studentId);
     userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
     {
@@ -263,6 +285,8 @@ public class LeaderboardManager : MonoBehaviour
 
             searchAddButton.gameObject.SetActive(isInstructor);
             searchSubtractButton.gameObject.SetActive(isInstructor);
+
+
         }
         else
         {
@@ -293,7 +317,7 @@ public class LeaderboardManager : MonoBehaviour
     }
 
     DocumentReference userDocRef = db.Collection("users").Document(searchStudentId);
-    userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>  
     {
         if (task.IsCompleted && task.Result.Exists)
         {
