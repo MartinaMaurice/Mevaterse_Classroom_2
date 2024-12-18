@@ -102,36 +102,49 @@ public class InstructorTabletManager : MonoBehaviour
                         string userId = userDoc.Id;
                         string userName = userDoc.ContainsField("name") ? userDoc.GetValue<string>("name") : "Unknown User";
 
-                        // Fetch the Exercise collection only once for this user
+                        // Fetch the Exercise collection for the user
                         db.Collection("users").Document(userId).Collection("Exercise")
                             .GetSnapshotAsync()
                             .ContinueWithOnMainThread(exerciseTask =>
                             {
-                                if (exerciseTask.IsCompletedSuccessfully && exerciseTask.Result.Documents.Count > 0)
+                                if (exerciseTask.IsCompletedSuccessfully)
                                 {
-                                    // Create one button per student, even if multiple exercises exist
-                                    GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
-                                    TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
+                                    QuerySnapshot exercises = exerciseTask.Result; // Correct way to access result
 
-                                    if (studentNameText != null)
+                                    if (exercises.Documents.Count() > 0)
                                     {
-                                        studentNameText.text = userName;
+                                        // Create one button per student
+                                        GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
+                                        TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
+
+                                        if (studentNameText != null)
+                                        {
+                                            studentNameText.text = userName;
+                                        }
+
+                                        // Fetch the first exercise
+                                        DocumentSnapshot firstExercise = exercises.Documents.FirstOrDefault();
+                                        string code = firstExercise.ContainsField("code")
+                                            ? firstExercise.GetValue<string>("code")
+                                            : "No code found";
+                                        string output = firstExercise.ContainsField("output")
+                                            ? firstExercise.GetValue<string>("output")
+                                            : "No output found";
+
+                                        // Add listener to button
+                                        studentButton.GetComponent<Button>()
+                                            .onClick.AddListener(() => OnGradeButtonClicked(userId, firstExercise.Id, code, output));
+
+                                        Debug.Log($"Button created for {userName} with code: {code} and output: {output}");
                                     }
-
-                                    // Get the first exercise to display (adjust if needed)
-                                    var firstExercise = exerciseTask.Result.Documents.First();
-                                    string code = firstExercise.ContainsField("code")
-                                        ? firstExercise.GetValue<string>("code")
-                                        : "No code found";
-                                    string output = firstExercise.ContainsField("output")
-                                        ? firstExercise.GetValue<string>("output")
-                                        : "No output found";
-
-                                    // Add listener to button
-                                    studentButton.GetComponent<Button>()
-                                        .onClick.AddListener(() => OnGradeButtonClicked(userId, firstExercise.Id, code, output));
-
-                                    Debug.Log($"Button created for {userName}");
+                                    else
+                                    {
+                                        Debug.Log($"No exercises found for {userName}.");
+                                    }
+                                }
+                                else
+                                {
+                                    Debug.LogError($"Failed to fetch Exercise collection for user: {userId}, Error: {exerciseTask.Exception}");
                                 }
                             });
                     }
@@ -143,6 +156,7 @@ public class InstructorTabletManager : MonoBehaviour
             });
         }
     }
+
 
 
 
