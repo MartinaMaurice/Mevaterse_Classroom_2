@@ -12,26 +12,37 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
 
     void Start()
     {
-        // Initializing with an empty or default slide, if needed
+        // Load slides with a default lecture folder if available
+        string defaultLectureFolder = "Lecture1"; // Replace with your folder name
+        LoadSlidesForLecture(defaultLectureFolder);
+
         if (slides.Count > 0)
         {
             GetComponent<Renderer>().material = slides[0];
+        }
+        else
+        {
+            Debug.LogError("No slides loaded at Start. Check the folder path.");
         }
     }
 
     // Method to load slides for a selected lecture folder
     public void LoadSlidesForLecture(string lectureFolderName)
     {
-        // Clear existing slides
         slides.Clear();
         current = 0;
 
-        // Set the images path based on selected lecture
-        string imagesPath = Path.Combine("Images", lectureFolderName);  // Use Resources path format
+        string imagesPath = Path.Combine("Images", lectureFolderName); // Path relative to Resources
         Object[] textures = Resources.LoadAll(imagesPath, typeof(Texture2D));
 
-        Debug.Log("Loading slides from folder: " + imagesPath);
-        Debug.Log("Found " + textures.Length + " slides");
+        Debug.Log($"Attempting to load slides from: Resources/{imagesPath}");
+        Debug.Log($"Number of slides found: {textures.Length}");
+
+        if (textures.Length == 0)
+        {
+            Debug.LogError($"No slides found in path: Resources/{imagesPath}. Check folder structure and file names.");
+            return;
+        }
 
         foreach (Object tex in textures)
         {
@@ -40,17 +51,18 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
             slides.Add(mat);
         }
 
-        // Update the board with the first slide if available
         if (slides.Count > 0)
         {
             GetComponent<Renderer>().material = slides[0];
-            Debug.Log("Loaded " + slides.Count + " slides from " + imagesPath);
+            Debug.Log($"Successfully loaded {slides.Count} slides from Resources/{imagesPath}");
         }
         else
         {
-            Debug.LogError("No slides found in " + imagesPath);
+            Debug.LogError("Slides list is empty after loading. This should not happen!");
         }
     }
+
+
     void Update()
     {
         if (PhotonNetwork.LocalPlayer.UserId != Presenter.Instance.presenterID) return;
@@ -69,6 +81,13 @@ public class BoardController : MonoBehaviourPunCallbacks, IPunObservable
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
+        // Ensure slides are loaded before syncing
+        if (slides.Count == 0)
+        {
+            Debug.LogError("Slides are not loaded. Loading default slides.");
+            LoadSlidesForLecture("Lecture1");
+        }
+
         photonView.RPC("ChangeSlideRpc", RpcTarget.All, 0);
     }
 
