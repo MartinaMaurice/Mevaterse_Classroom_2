@@ -34,6 +34,14 @@ public class InstructorTabletManager : MonoBehaviour
         gradePanel.SetActive(false);
         // RetrieveStudentsWithExercises   ();
         submitUserIDButton.onClick.AddListener(OnSubmitUserID);
+        // Dynamically assign the Main Camera to the Canvas
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas.renderMode == RenderMode.WorldSpace)
+        {
+            canvas.worldCamera = Camera.main; // Assign the Main Camera
+        }
+
+        submitUserIDButton.onClick.AddListener(OnSubmitUserID);
     }
 
     private void OnSubmitUserID()
@@ -73,156 +81,105 @@ public class InstructorTabletManager : MonoBehaviour
 
     private void RetrieveStudentsWithExercises()
     {
-        Debug.Log("Retrieving students with exercises...");
-
-        // Find the Content Transform for Student Buttons
         Transform contentTransform = studentListPanel.transform.Find("StudentsScrollView/Viewport/Content");
-        if (contentTransform == null)
-        {
-            Debug.LogError("Content transform not found. Please check your hierarchy.");
-            return;
-        }
+        Debug.Log(contentTransform != null ? "Content transform found!" : "Content transform NOT found.");
 
-        // Clear existing buttons to avoid duplicates
-        foreach (Transform child in contentTransform)
+        if (contentTransform != null)
         {
-            Destroy(child.gameObject);
-        }
+            foreach (Transform child in contentTransform)
+            {
+                Destroy(child.gameObject); // Clean up existing buttons
+            }
 
-        // Query Firestore to retrieve all users
-        db.Collection("users")
-            .GetSnapshotAsync()
-            .ContinueWithOnMainThread(task =>
+            db.Collection("users").GetSnapshotAsync().ContinueWithOnMainThread(task =>
             {
                 if (task.IsCompletedSuccessfully)
                 {
                     QuerySnapshot userSnapshots = task.Result;
-                    int studentCount = 0;
 
                     foreach (DocumentSnapshot userDoc in userSnapshots.Documents)
                     {
                         string userId = userDoc.Id;
                         string userName = userDoc.ContainsField("name") ? userDoc.GetValue<string>("name") : "Unknown User";
 
-                        db.Collection("users").Document(userId).Collection("exercises")
+                        // Fetch the Exercise collection only once for this user
+                        db.Collection("users").Document(userId).Collection("Exercise")
                             .GetSnapshotAsync()
                             .ContinueWithOnMainThread(exerciseTask =>
                             {
-                                if (exerciseTask.IsCompletedSuccessfully && exerciseTask.Result.Count() > 0)
+                                if (exerciseTask.IsCompletedSuccessfully && exerciseTask.Result.Documents.Count > 0)
                                 {
-                                    studentCount++;
-                                    Debug.Log("Instantiating button for student: " + userName);
-
-                                    // Instantiate the student button prefab under Content
+                                    // Create one button per student, even if multiple exercises exist
                                     GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
-
-                                    // Ensure TMP_Text component is found
                                     TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
+
                                     if (studentNameText != null)
                                     {
                                         studentNameText.text = userName;
                                     }
-                                    else
-                                    {
-                                        Debug.LogError("Failed to find TMP_Text component on student button prefab.");
-                                    }
 
-                                    // Add a listener to handle grading
-                                    studentButton.GetComponent<Button>().onClick.AddListener(() => OnGradeButtonClicked(userId));
+                                    // Get the first exercise to display (adjust if needed)
+                                    var firstExercise = exerciseTask.Result.Documents.First();
+                                    string code = firstExercise.ContainsField("code")
+                                        ? firstExercise.GetValue<string>("code")
+                                        : "No code found";
+                                    string output = firstExercise.ContainsField("output")
+                                        ? firstExercise.GetValue<string>("output")
+                                        : "No output found";
+
+                                    // Add listener to button
+                                    studentButton.GetComponent<Button>()
+                                        .onClick.AddListener(() => OnGradeButtonClicked(userId, firstExercise.Id, code, output));
+
+                                    Debug.Log($"Button created for {userName}");
                                 }
                             });
                     }
-
-                    if (studentCount == 0)
-                    {
-                        Debug.Log("No students with exercises found.");
-                    }
-                    else
-                    {
-                        Debug.Log("Total students with exercises found: " + studentCount);
-                    }
                 }
                 else
                 {
-                    Debug.LogError("Failed to retrieve users: " + task.Exception);
+                    Debug.LogError("Failed to retrieve users.");
                 }
             });
+        }
     }
 
 
-    private void OnGradeButtonClicked(string userId)
+
+    private void OnGradeButtonClicked(string userId, string exerciseId, string code, string output)
     {
         selectedUserId = userId;
+        selectedExerciseId = exerciseId;
+
         gradePanel.SetActive(true);
         studentListPanel.SetActive(false);
 
-        db.Collection("users").Document(userId).Collection("exercises")
-            .GetSnapshotAsync()
-            .ContinueWithOnMainThread(task =>
-            {
-                if (task.IsCompletedSuccessfully)
-                {
-                    QuerySnapshot snapshot = task.Result;
+        if (inputCodeText != null) inputCodeText.text = code;
+        if (outputText != null) outputText.text = output;
 
-                    foreach (DocumentSnapshot exerciseDoc in snapshot.Documents)
-                    {
-                        string inputCode = exerciseDoc.ContainsField("code") ? exerciseDoc.GetValue<string>("code") : "No code available";
-                        string output = exerciseDoc.ContainsField("output") ? exerciseDoc.GetValue<string>("output") : "No output available";
-                        selectedExerciseId = exerciseDoc.Id;
-
-                        if (inputCodeText != null)
-                        {
-                            inputCodeText.text = inputCode;
-                        }
-                        else
-                        {
-                            Debug.LogWarning("Input code text field is not assigned in the Inspector.");
-                        }
-
-                        if (outputText != null)
-                        {
-                            outputText.text = output;
-                        }
-                        else
-                        {
-                            Debug.LogWarning("Output text field is not assigned in the Inspector.");
-                        }
-                    }
-                }
-                else
-                {
-                    Debug.LogError("Failed to retrieve exercises for user: " + task.Exception);
-                }
-            });
+        Debug.Log($"Displaying Code: {code}, Output: {output}");
     }
+
 
     public void OnSaveGradeButtonClicked()
     {
-        string grade = gradeInputField?.text; // Safe access in case it's null
-
-        // Debug log for grade input and selected IDs
-        Debug.Log($"Attempting to save score. Grade input: {grade}, Selected User ID: {selectedUserId}, Selected Exercise ID: {selectedExerciseId}");
+        string grade = gradeInputField?.text;
 
         if (!string.IsNullOrEmpty(grade) && !string.IsNullOrEmpty(selectedUserId) && !string.IsNullOrEmpty(selectedExerciseId))
         {
-            // Prepare data with "score" instead of "grade"
             Dictionary<string, object> gradeData = new Dictionary<string, object>
         {
-            { "score", grade } // Storing the grade as "score"
+            { "score", grade }
         };
 
-            // Debug log for Firestore path
-            Debug.Log($"Saving score to Firestore path: users/{selectedUserId}/exercises/{selectedExerciseId}");
-
-            db.Collection("users").Document(selectedUserId).Collection("exercises").Document(selectedExerciseId)
+            db.Collection("users").Document(selectedUserId)
+                .Collection("Exercise").Document(selectedExerciseId)
                 .SetAsync(gradeData, SetOptions.MergeAll)
                 .ContinueWithOnMainThread(task =>
                 {
                     if (task.IsCompletedSuccessfully)
                     {
                         Debug.Log("Score saved successfully.");
-
-                        // Switch panels: hide grade panel, show student list panel
                         gradePanel.SetActive(false);
                         studentListPanel.SetActive(true);
                     }
@@ -234,8 +191,9 @@ public class InstructorTabletManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Score or user information is missing. Please check that all fields are properly assigned.");
+            Debug.LogError("Missing grade, user ID, or exercise ID.");
         }
     }
+
 
 }

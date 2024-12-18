@@ -1,0 +1,3 @@
+16:18:45: 18 joined the room
+16:18:55: Presenter is now 18
+16:21:42: 18 raised a hand!
