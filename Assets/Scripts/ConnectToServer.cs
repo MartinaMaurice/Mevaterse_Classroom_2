@@ -46,16 +46,16 @@ public class ConnectToServer : MonoBehaviourPunCallbacks
     private bool isRejoining = false;
     private CourseManager courseManager = new CourseManager();  // Initialize CourseManager
     private FirestoreManager firestoreManager;
-private ActivityStatsManager statsManager;
+    private ActivityStatsManager statsManager;
 
-private string userId;  // Holds the User ID
+    private string userId;  // Holds the User ID
 
 
-   
+
     void Start()
     {
         PhotonCustomTypes.RegisterCustomTypes();
-    statsManager = FindObjectOfType<ActivityStatsManager>();
+        statsManager = FindObjectOfType<ActivityStatsManager>();
 
         firestoreManager = FindObjectOfType<FirestoreManager>();  // Ensure FirestoreManager is available
 
@@ -214,9 +214,13 @@ private string userId;  // Holds the User ID
 
     public override void OnJoinedRoom()
     {
-        Debug.Log($"Successfully joined room: {PhotonNetwork.CurrentRoom.Name}");
-  statsManager.IncrementActivity("joined a room");
+        Debug.Log($"Player prefab: {player}");
+        Debug.Log($"Player name: {player?.name}");
+        Debug.Log($"Main camera: {GameObject.FindWithTag("MainCamera")}");
 
+        Debug.Log($"Successfully joined room: {PhotonNetwork.CurrentRoom.Name}");
+        Debug.Log("heree");
+        statsManager.IncrementActivity("joined a room");
         Hashtable roomProperties = PhotonNetwork.CurrentRoom.CustomProperties;
         if (roomProperties.TryGetValue("CourseName", out object courseName) &&
             roomProperties.TryGetValue("CourseID", out object courseId))
@@ -281,27 +285,27 @@ private string userId;  // Holds the User ID
         ResetUI();
     }
 
-   public void LeaveRoom()
-{
-    if (PhotonNetwork.InRoom)
+    public void LeaveRoom()
     {
-        PhotonNetwork.LeaveRoom();  // Leave the room properly
-        isRejoining = true;  // Set flag to rejoin lobby after leaving
-
-        if (!string.IsNullOrEmpty(userId))  // Ensure userId is set
+        if (PhotonNetwork.InRoom)
         {
-            statsManager.SaveStatistics(userId);
+            PhotonNetwork.LeaveRoom();  // Leave the room properly
+            isRejoining = true;  // Set flag to rejoin lobby after leaving
+
+            if (!string.IsNullOrEmpty(userId))  // Ensure userId is set
+            {
+                statsManager.SaveStatistics(userId);
+            }
+            else
+            {
+                Debug.LogWarning("User ID is not set. Statistics not saved.");
+            }
         }
         else
         {
-            Debug.LogWarning("User ID is not set. Statistics not saved.");
+            ResetUI();
         }
     }
-    else
-    {
-        ResetUI();
-    }
-}
 
     private void ResetUI()
     {

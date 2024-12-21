@@ -86,9 +86,10 @@ public class InstructorTabletManager : MonoBehaviour
 
         if (contentTransform != null)
         {
+            // Clean up existing buttons
             foreach (Transform child in contentTransform)
             {
-                Destroy(child.gameObject); // Clean up existing buttons
+                Destroy(child.gameObject);
             }
 
             db.Collection("users").GetSnapshotAsync().ContinueWithOnMainThread(task =>
@@ -109,37 +110,65 @@ public class InstructorTabletManager : MonoBehaviour
                             {
                                 if (exerciseTask.IsCompletedSuccessfully)
                                 {
-                                    QuerySnapshot exercises = exerciseTask.Result; // Correct way to access result
+                                    QuerySnapshot exercises = exerciseTask.Result;
 
-                                    if (exercises.Documents.Count() > 0)
+                                    // Check if there are any exercises without a grade ("score")
+                                    bool hasUngradedExercises = false;
+                                    DocumentSnapshot firstUngradedExercise = null;
+
+                                    foreach (var exercise in exercises.Documents)
                                     {
-                                        // Create one button per student
-                                        GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
-                                        TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
+                                        if (!exercise.ContainsField("score"))
+                                        {
+                                            hasUngradedExercises = true;
+                                            firstUngradedExercise = exercise;
+                                            break; // Stop after finding the first ungraded exercise
+                                        }
+                                    }
 
+                                    // Only create a button if there is at least one ungraded exercise
+                                    if (hasUngradedExercises && contentTransform.Find(userId) == null)
+                                    {
+                                        // Get exercise details
+                                        string code = firstUngradedExercise.ContainsField("code")
+                                            ? firstUngradedExercise.GetValue<string>("code")
+                                            : "No code found";
+                                        string output = firstUngradedExercise.ContainsField("output")
+                                            ? firstUngradedExercise.GetValue<string>("output")
+                                            : "No output found";
+
+                                        // Create a button for the student
+                                        GameObject studentButton = Instantiate(studentButtonPrefab, contentTransform);
+                                        studentButton.name = userId; // Set unique name for the button to prevent duplicates
+                                        RectTransform rectTransform = studentButton.GetComponent<RectTransform>();
+
+                                        if (rectTransform != null)
+                                        {
+                                            rectTransform.localScale = Vector3.one; // Reset scale
+                                            rectTransform.anchoredPosition = Vector2.zero; // Align to center of parent
+                                            rectTransform.sizeDelta = new Vector2(200, 50); // Set size if needed
+                                        }
+
+                                        // Configure button text
+                                        TMP_Text studentNameText = studentButton.GetComponentInChildren<TMP_Text>();
                                         if (studentNameText != null)
                                         {
                                             studentNameText.text = userName;
                                         }
-
-                                        // Fetch the first exercise
-                                        DocumentSnapshot firstExercise = exercises.Documents.FirstOrDefault();
-                                        string code = firstExercise.ContainsField("code")
-                                            ? firstExercise.GetValue<string>("code")
-                                            : "No code found";
-                                        string output = firstExercise.ContainsField("output")
-                                            ? firstExercise.GetValue<string>("output")
-                                            : "No output found";
+                                        else
+                                        {
+                                            Debug.LogError("TMP_Text component missing on student button prefab.");
+                                        }
 
                                         // Add listener to button
                                         studentButton.GetComponent<Button>()
-                                            .onClick.AddListener(() => OnGradeButtonClicked(userId, firstExercise.Id, code, output));
+                                            .onClick.AddListener(() => OnGradeButtonClicked(userId, firstUngradedExercise.Id, code, output));
 
-                                        Debug.Log($"Button created for {userName} with code: {code} and output: {output}");
+                                        Debug.Log($"Button created for {userName} with ungraded exercise. Code: {code}, Output: {output}");
                                     }
-                                    else
+                                    else if (!hasUngradedExercises)
                                     {
-                                        Debug.Log($"No exercises found for {userName}.");
+                                        Debug.Log($"All exercises graded for {userName}, no button created.");
                                     }
                                 }
                                 else
@@ -156,9 +185,6 @@ public class InstructorTabletManager : MonoBehaviour
             });
         }
     }
-
-
-
 
     private void OnGradeButtonClicked(string userId, string exerciseId, string code, string output)
     {
@@ -194,6 +220,11 @@ public class InstructorTabletManager : MonoBehaviour
                     if (task.IsCompletedSuccessfully)
                     {
                         Debug.Log("Score saved successfully.");
+
+                        // Refresh the list to remove graded exercises
+                        RetrieveStudentsWithExercises();
+
+                        // Reset the UI panels
                         gradePanel.SetActive(false);
                         studentListPanel.SetActive(true);
                     }
@@ -208,6 +239,7 @@ public class InstructorTabletManager : MonoBehaviour
             Debug.LogError("Missing grade, user ID, or exercise ID.");
         }
     }
+
 
 
 }
