@@ -453,31 +453,51 @@ public class InstructorToolkit : MonoBehaviour
     }
 
     // Reads user data from the selected Excel file
-    List<Dictionary<string, object>> ReadUserExcelFile(string filePath)
-    {
-        List<Dictionary<string, object>> userData = new List<Dictionary<string, object>>();
+   // Reads user data from the selected Excel file
+List<Dictionary<string, object>> ReadUserExcelFile(string filePath)
+{
+    List<Dictionary<string, object>> userData = new List<Dictionary<string, object>>();
 
-        using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+    using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read))
+    {
+        using (var reader = ExcelReaderFactory.CreateReader(stream))
         {
-            using (var reader = ExcelReaderFactory.CreateReader(stream))
+            // Skip header row
+            if (!reader.Read())
             {
-                // Skip header row
-                reader.Read();
-                while (reader.Read())
+                UnityDebug.LogError("Excel file is empty or missing headers.");
+                return userData; // Return empty list if no headers
+            }
+
+            while (reader.Read())
+            {
+                // Check if the row has at least 4 columns
+                if (reader.FieldCount < 4)
                 {
-                    var userEntry = new Dictionary<string, object>
-                    {
-                        { "name", reader.GetValue(0)?.ToString() },
-                        { "id", reader.GetValue(1)?.ToString() },
-                        { "course_id", reader.GetValue(2)?.ToString() },
-                        {"role", reader.GetValue(3)?.ToString() }
-                    };
-                    userData.Add(userEntry);
+                    UnityDebug.LogWarning($"Skipping row with insufficient columns. Found {reader.FieldCount}, expected at least 4.");
+                    continue;
                 }
+
+                // Check if the required fields are not null
+                if (reader.GetValue(0) == null || reader.GetValue(1) == null || reader.GetValue(2) == null || reader.GetValue(3) == null)
+                {
+                    UnityDebug.LogWarning("Skipping row with missing data. One or more required fields are null.");
+                    continue;
+                }
+
+                var userEntry = new Dictionary<string, object>
+                {
+                    { "name", reader.GetValue(0)?.ToString() },
+                    { "id", reader.GetValue(1)?.ToString() },
+                    { "course_id", reader.GetValue(2)?.ToString() },
+                    { "role", reader.GetValue(3)?.ToString() }
+                };
+                userData.Add(userEntry);
             }
         }
-        return userData;
     }
+    return userData;
+}
 
     // Saves the parsed user data to Firestore
     void SaveUsersToFirestore(List<Dictionary<string, object>> userData)

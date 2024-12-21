@@ -19,18 +19,30 @@ public class TabletManager : MonoBehaviour
     [SerializeField] private Button[] answerButtons;
     [SerializeField] private TextMeshProUGUI scoreText; // Text element to display the final score
     [SerializeField] private Button submitButton; // Reference to the submit button
+    [SerializeField] private GameObject[] allTablets; // Array of all tablets in the network
+
+
 
     private FirebaseFirestore db;
+    private ActivityStatsManager statsManager;
+
     private string userId;
     private List<Dictionary<string, object>> questions;
     private int currentQuestionIndex = 0;
     private int score = 0; // Tracks the score/grade
     private string selectedQuizId;
     private string selectedLectureType; // Stores if selection is "Quiz" or "Exercise"
+    public static string[] SelectedQuizArray = new string[1];
+    private TabletNetworkManager tabletNetworkManager;  // Reference to the TabletNetworkManager
+    private bool isInstructor = false; // Default is student; set to true if the user is an instructor
+
 
     void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
+        tabletNetworkManager = FindObjectOfType<TabletNetworkManager>(); // Get TabletNetworkManager instance
+    statsManager = FindObjectOfType<ActivityStatsManager>();
+    
         quizPanel.SetActive(false);
         userIDPanel.SetActive(true);
         scoreText.gameObject.SetActive(false); // Hide score text initially
@@ -42,6 +54,9 @@ public class TabletManager : MonoBehaviour
         QuizButton.onClick.AddListener(OpenQuiz);
         CloseButton.onClick.AddListener(ClosePanel);
     }
+
+
+
     public string UserId
     {
         get { return userId; }
@@ -64,19 +79,25 @@ public class TabletManager : MonoBehaviour
 
     public void OnUserIDSubmit()
     {
+
+
+
         userId = userIDInputField.text;
         if (!string.IsNullOrEmpty(userId))
         {
             ValidateUserID(userId);
+
         }
         else
         {
             Debug.LogError("User ID cannot be empty.");
         }
     }
+  
 
-    void ValidateUserID(string userId)
+      private void ValidateUserID(string userId)
     {
+
         db.Collection("users").Document(userId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted && task.Result.Exists)
@@ -84,6 +105,19 @@ public class TabletManager : MonoBehaviour
                 Debug.Log("User exists.");
                 userIDPanel.SetActive(false);
                 selectionPanel.SetActive(true); // Show selection panel after validating user
+                statsManager.IncrementActivity("User_Validated");
+
+                // Check the user's role
+                if (task.Result.ContainsField("role"))
+                {
+                    string role = task.Result.GetValue<string>("role");
+                    isInstructor = role == "instructor"; // Set role
+                }
+
+                // Delegate visibility handling to TabletNetworkManager
+                tabletNetworkManager.HideOtherTablets(userId, isInstructor);
+
+
             }
             else
             {
@@ -91,9 +125,11 @@ public class TabletManager : MonoBehaviour
             }
         });
     }
-    void OpenIDE()
+
+    
+        void OpenIDE()
     {
-        if (selectedLectureType == "Exercise" || selectedLectureType=="Assignment")
+            if (selectedLectureType == "Exercise" || selectedLectureType=="Assignment")
         {
             selectionPanel.SetActive(false);
             IDEPanel.SetActive(true);
@@ -106,43 +142,51 @@ public class TabletManager : MonoBehaviour
         }
     }
 
-    void OpenQuiz()
+       void OpenQuiz()
     {
-        if (selectedLectureType == "Quiz")
+        Debug.Log("Attempting to open quiz...");
+
+        // Retrieve the quiz ID from the global array
+        if (SelectedQuizArray.Length > 0 && !string.IsNullOrEmpty(SelectedQuizArray[0]))
         {
-            selectionPanel.SetActive(false);
+            selectedQuizId = SelectedQuizArray[0];
+            Debug.Log($"Selected Quiz ID: {selectedQuizId}");
+
             quizPanel.SetActive(true);
             IDEPanel.SetActive(false);
-            LoadQuizFromFirestore(selectedQuizId);
-            Debug.Log("Quiz Panel opened.");
+            selectionPanel.SetActive(false);
+
+            LoadQuizFromFirestore(selectedQuizId); // Load the quiz using the ID
+    statsManager.IncrementActivity("Quiz_Started");
+    
+
         }
         else
         {
-            Debug.LogError("Please select a quiz from the dropdown to open the Quiz.");
+            Debug.LogError("No quiz ID selected. Please select a quiz first.");
         }
     }
 
-    void LoadQuizFromFirestore(string quizId)
+     void LoadQuizFromFirestore(string quizId)
     {
-        if (string.IsNullOrEmpty(quizId))
-        {
-            Debug.LogError("Quiz ID is not set. Cannot load quiz.");
-            return;
-        }
+        Debug.Log($"Loading quiz from Firestore with ID: {quizId}");
 
         db.Collection("quizzes").Document(quizId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsCompleted && task.Result.Exists)
             {
-                var quizData = task.Result.ToDictionary();
                 questions = new List<Dictionary<string, object>>();
+                var quizData = task.Result.ToDictionary();
 
                 if (quizData.ContainsKey("material"))
                 {
                     var material = quizData["material"] as List<object>;
                     foreach (var item in material)
                     {
-                        questions.Add(item as Dictionary<string, object>);
+                        if (item is Dictionary<string, object> question)
+                        {
+                            questions.Add(question);
+                        }
                     }
 
                     currentQuestionIndex = 0;
@@ -156,10 +200,11 @@ public class TabletManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError("Quiz not found or error retrieving quiz.");
+                Debug.LogError("Error loading quiz: " + (task.Exception?.Message ?? "Quiz not found"));
             }
         });
     }
+
 
     void DisplayQuestion(int questionIndex)
     {
@@ -256,8 +301,11 @@ public class TabletManager : MonoBehaviour
         submitButton.GetComponentInChildren<TextMeshProUGUI>().text = "Exit";
         submitButton.onClick.RemoveAllListeners();
         submitButton.onClick.AddListener(ExitQuiz);
-
+ statsManager.IncrementActivity("Quiz_Completed");
+    statsManager.SaveStatistics(userId); // Save full stats when quiz ends
         SaveQuizResults(); // Save the quiz results to Firestore
+
+
     }
 
     void ExitQuiz()

@@ -3,30 +3,38 @@ using UnityEngine;
 using TMPro;
 using Firebase.Firestore;
 using Firebase.Extensions;
-using System.Threading.Tasks;
 using UnityEngine.UI;
+using System;
 
 public class LeaderboardManager : MonoBehaviour
 {
+
     [SerializeField] private TMP_Dropdown categoryDropdown;
     [SerializeField] private TMP_InputField searchInputField;
     [SerializeField] private TextMeshProUGUI[] rankTexts;
-    [SerializeField] public Button[] addButtons;
-    [SerializeField] public Button[] subtractButtons;
+    [SerializeField] private Button[] addButtons;
+    [SerializeField] private Button[] subtractButtons;
     [SerializeField] private TextMeshProUGUI searchResultText;
-    [SerializeField] public Button searchAddButton;
-    [SerializeField] public Button searchSubtractButton;
+    [SerializeField] private Button searchAddButton;
+    [SerializeField] private Button searchSubtractButton;
 
-    private FirebaseFirestore db;
+      private FirebaseFirestore db;
     private string searchStudentId;
+        private string userId; // User ID
+private ActivityStatsManager statsManager;
+
+    private string userRole = "Student"; // Default role
 
     private List<StudentResult> studentResults = new List<StudentResult>();
 
-    private void Start()
+
+    
+     private void Start()
     {
         db = FirebaseFirestore.DefaultInstance;
 
         InitializeDropdown();
+    statsManager = FindObjectOfType<ActivityStatsManager>();
 
         for (int i = 0; i < addButtons.Length; i++)
         {
@@ -39,6 +47,45 @@ public class LeaderboardManager : MonoBehaviour
         searchSubtractButton.onClick.AddListener(() => AdjustSearchResultScore(-1));
 
         searchInputField.onEndEdit.AddListener(SearchStudentById);
+
+        // Get userId from PlayerPrefs and fetch role from RoleManager
+        userId = PlayerPrefs.GetString("UserID", null);
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogError("User ID not found.");
+            return;
+        }
+
+        userRole = RoleManager.Instance.GetRole(userId);
+        Debug.Log($"LeaderboardManager: Role for UserID {userId} is {userRole}");
+
+        UpdateButtonVisibility();
+    }
+
+      public void SetUserRole(string role)
+    {
+        userRole = role;
+        Debug.Log($"User role set in LeaderboardManager: {userRole}");
+        UpdateButtonVisibility();
+    }
+     private void UpdateButtonVisibility()
+    {
+        bool isInstructor = userRole == "Instructor";
+
+        foreach (Button button in addButtons)
+        {
+            if (button != null) button.gameObject.SetActive(isInstructor);
+        }
+
+        foreach (Button button in subtractButtons)
+        {
+            if (button != null) button.gameObject.SetActive(isInstructor);
+        }
+
+        if (searchAddButton != null) searchAddButton.gameObject.SetActive(isInstructor);
+        if (searchSubtractButton != null) searchSubtractButton.gameObject.SetActive(isInstructor);
+
+        Debug.Log($"Button visibility updated. Is Instructor: {isInstructor}");
     }
 
     private void InitializeDropdown()
@@ -53,10 +100,69 @@ public class LeaderboardManager : MonoBehaviour
     {
         string selectedCategory = categoryDropdown.options[index].text;
 
+    statsManager.IncrementActivity("Leaderboard_opened");
+
         if (selectedCategory == "Total Score")
         {
             FetchTopStudents();
         }
+
+
+    }
+
+    private async void FetchUserRole()
+    {
+        string userId = PlayerPrefs.GetString("UserID", null);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogError("User ID not found. Ensure the user is logged in.");
+            return;
+        }
+
+        Debug.Log("Fetching user role...");
+        DocumentReference userDocRef = db.Collection("users").Document(userId);
+        DocumentSnapshot snapshot = await userDocRef.GetSnapshotAsync();
+
+        if (snapshot.Exists && snapshot.ContainsField("role"))
+        {
+            userRole = snapshot.GetValue<string>("role");
+            Debug.Log($"User role fetched: {userRole}");
+        }
+        else
+        {
+            Debug.LogError("User role not found in the database. Defaulting to 'Student'.");
+            userRole = "Student"; // Default role
+        }
+
+        CheckUserRole();
+    }
+
+    private void CheckUserRole()
+    {
+        bool isInstructor = userRole == "Instructor";
+        Debug.Log($"User role: {userRole}. Is Instructor: {isInstructor}");
+
+        // Enable/Disable Add/Subtract buttons based on role
+        foreach (Button button in addButtons)
+        {
+            if (button != null)
+            {
+                button.gameObject.SetActive(isInstructor);
+            }
+        }
+
+        foreach (Button button in subtractButtons)
+        {
+            if (button != null)
+            {
+                button.gameObject.SetActive(isInstructor);
+            }
+        }
+
+        // Enable/Disable search Add/Subtract buttons
+        if (searchAddButton != null) searchAddButton.gameObject.SetActive(isInstructor);
+        if (searchSubtractButton != null) searchSubtractButton.gameObject.SetActive(isInstructor);
     }
 
     private async void FetchTopStudents()
@@ -83,24 +189,41 @@ public class LeaderboardManager : MonoBehaviour
     {
         results.Sort((a, b) => b.Score.CompareTo(a.Score));
 
-        for (int i = 0; i < rankTexts.Length && i < results.Count; i++)
+        for (int i = 0; i < rankTexts.Length; i++)
         {
-            rankTexts[i].text = $"Rank {i + 1}: {results[i].Name}, Score: {results[i].Score}<3";
-            rankTexts[i].gameObject.SetActive(true);
-            addButtons[i].gameObject.SetActive(true);
-            subtractButtons[i].gameObject.SetActive(true);
-        }
+            if (i < results.Count)
+            {
+                rankTexts[i].text = $"Rank {i + 1}: {results[i].Name}, Score: {results[i].Score}";
+                rankTexts[i].gameObject.SetActive(true);
 
-        for (int i = results.Count; i < rankTexts.Length; i++)
-        {
-            rankTexts[i].gameObject.SetActive(false);
-            addButtons[i].gameObject.SetActive(false);
-            subtractButtons[i].gameObject.SetActive(false);
+                if (userRole == "Instructor")
+                {
+                    if (addButtons[i] != null) addButtons[i].gameObject.SetActive(true);
+                    if (subtractButtons[i] != null) subtractButtons[i].gameObject.SetActive(true);
+                }
+                else
+                {
+                    if (addButtons[i] != null) addButtons[i].gameObject.SetActive(false);
+                    if (subtractButtons[i] != null) subtractButtons[i].gameObject.SetActive(false);
+                }
+            }
+            else
+            {
+                rankTexts[i].gameObject.SetActive(false);
+                if (addButtons[i] != null) addButtons[i].gameObject.SetActive(false);
+                if (subtractButtons[i] != null) subtractButtons[i].gameObject.SetActive(false);
+            }
         }
     }
 
     private void AdjustScore(int index, int amount)
     {
+        if (userRole != "Instructor")
+        {
+            Debug.LogWarning("Only instructors can adjust scores.");
+            return;
+        }
+
         if (index >= studentResults.Count)
         {
             Debug.LogError("Index out of bounds in AdjustScore function.");
@@ -108,7 +231,7 @@ public class LeaderboardManager : MonoBehaviour
         }
 
         string studentId = studentResults[index].Id;
-
+  statsManager.IncrementActivity("Score_Adjusted");
         DocumentReference userDocRef = db.Collection("users").Document(studentId);
         userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
@@ -122,8 +245,7 @@ public class LeaderboardManager : MonoBehaviour
                     if (updateTask.IsCompleted)
                     {
                         Debug.Log($"Updated total score for {studentId} to {newScore}");
-                        FetchTopStudents(); // Refresh leaderboard
-                        if (searchStudentId == studentId) SearchStudentById(searchStudentId); // Refresh search result if it matches
+                        FetchTopStudents();
                     }
                     else
                     {
@@ -133,81 +255,95 @@ public class LeaderboardManager : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"User document not found or failed to retrieve for ID: {studentId}");
+                Debug.LogError($"User document not found for ID: {studentId}");
             }
         });
     }
-
     private void SearchStudentById(string studentId)
+{
+    if (string.IsNullOrEmpty(studentId))
     {
-        if (string.IsNullOrEmpty(studentId))
+        Debug.LogWarning("Search input is empty.");
+        return;
+    }
+  statsManager.IncrementActivity("search used in leaderboard");
+    DocumentReference userDocRef = db.Collection("users").Document(studentId);
+    userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    {
+        if (task.IsCompleted && task.Result.Exists)
         {
-            Debug.LogWarning("Search input is empty.");
-            return;
+            string studentName = task.Result.ContainsField("name") ? task.Result.GetValue<string>("name") : studentId;
+            int totalScore = task.Result.ContainsField("total_score") ? task.Result.GetValue<int>("total_score") : 0;
+
+            searchStudentId = studentId;
+            searchResultText.text = $"Name: {studentName} Total Score: {totalScore}";
+            searchResultText.gameObject.SetActive(true);
+
+            // Ensure buttons are only visible for instructors
+            bool isInstructor = userRole == "Instructor";
+            Debug.Log($"User role during search: {userRole}. Is Instructor: {isInstructor}");
+
+            searchAddButton.gameObject.SetActive(isInstructor);
+            searchSubtractButton.gameObject.SetActive(isInstructor);
+
+
         }
-
-        DocumentReference userDocRef = db.Collection("users").Document(studentId);
-        userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+        else
         {
-            if (task.IsCompleted && task.Result.Exists)
-            {
-                string studentName = task.Result.ContainsField("name") ? task.Result.GetValue<string>("name") : studentId;
-                int totalScore = task.Result.ContainsField("total_score") ? task.Result.GetValue<int>("total_score") : 0;
+            searchResultText.text = "Student not found.";
+            searchResultText.gameObject.SetActive(true);
 
-                searchStudentId = studentId;
-                searchResultText.text = $"ID: {studentId}\nName: {studentName}\nTotal Score: {totalScore}";
-                searchResultText.gameObject.SetActive(true);
+            // Hide buttons if no student is found
+            searchAddButton.gameObject.SetActive(false);
+            searchSubtractButton.gameObject.SetActive(false);
+        }
+    });
 
-                searchAddButton.gameObject.SetActive(true);
-                searchSubtractButton.gameObject.SetActive(true);
-            }
-            else
-            {
-                searchResultText.text = "Student not found.";
-                searchResultText.gameObject.SetActive(true);
 
-                searchAddButton.gameObject.SetActive(false);
-                searchSubtractButton.gameObject.SetActive(false);
-            }
-        });
+}
+
+   private void AdjustSearchResultScore(int amount)
+{
+    if (userRole != "Instructor")
+    {
+        Debug.LogWarning("Only instructors can adjust scores.");
+        return;
     }
 
-    private void AdjustSearchResultScore(int amount)
+    if (string.IsNullOrEmpty(searchStudentId))
     {
-        if (string.IsNullOrEmpty(searchStudentId))
-        {
-            Debug.LogWarning("No student selected for score adjustment.");
-            return;
-        }
+        Debug.LogWarning("No student selected for score adjustment.");
+        return;
+    }
 
-        DocumentReference userDocRef = db.Collection("users").Document(searchStudentId);
-        userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>
+    DocumentReference userDocRef = db.Collection("users").Document(searchStudentId);
+    userDocRef.GetSnapshotAsync().ContinueWithOnMainThread(task =>  
+    {
+        if (task.IsCompleted && task.Result.Exists)
         {
-            if (task.IsCompleted && task.Result.Exists)
+            int currentScore = task.Result.ContainsField("total_score") ? task.Result.GetValue<int>("total_score") : 0;
+            int newScore = Mathf.Max(0, currentScore + amount);
+
+            userDocRef.UpdateAsync("total_score", newScore).ContinueWithOnMainThread(updateTask =>
             {
-                int currentScore = task.Result.ContainsField("total_score") ? task.Result.GetValue<int>("total_score") : 0;
-                int newScore = currentScore + amount;
-
-                userDocRef.UpdateAsync("total_score", newScore).ContinueWithOnMainThread(updateTask =>
+                if (updateTask.IsCompleted)
                 {
-                    if (updateTask.IsCompleted)
-                    {
-                        Debug.Log($"Updated total score for {searchStudentId} to {newScore}");
-                        FetchTopStudents(); // Refresh leaderboard
-                        SearchStudentById(searchStudentId); // Refresh search result
-                    }
-                    else
-                    {
-                        Debug.LogError("Error updating total score: " + updateTask.Exception);
-                    }
-                });
-            }
-            else
-            {
-                Debug.LogError("Failed to retrieve document for score adjustment.");
-            }
-        });
-    }
+                    Debug.Log($"Updated total score for {searchStudentId} to {newScore}");
+                    FetchTopStudents();
+                    SearchStudentById(searchStudentId);
+                }
+                else
+                {
+                    Debug.LogError("Error updating total score: " + updateTask.Exception);
+                }
+            });
+        }
+        else
+        {
+            Debug.LogError("Failed to retrieve document for score adjustment.");
+        }
+    });
+}
 
     private class StudentResult
     {

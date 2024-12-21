@@ -7,31 +7,33 @@ using UnityEngine.UI;
 
 public class RoleHandler : MonoBehaviour
 {
-    public TMP_InputField playerNameInput;
-    public TMP_InputField roomNameInput;
-    public TMP_InputField userIdInput; // User ID input field for validation
-    public TMP_InputField courseIdInput; // Course ID input field for validation
-
-    public GameObject initialUI;
-
-    public GameObject debuggingPanel;
-    public GameObject toolkitButton;
-    public GameObject lectureSelector; // Reference to the LectureSelector GameObject
+    [SerializeField] private TMP_InputField playerNameInput;
+    [SerializeField] private TMP_InputField roomNameInput;
+    [SerializeField] private TMP_InputField userIdInput;
+    [SerializeField] private TMP_InputField courseIdInput;
+    [SerializeField] private GameObject initialUI;
+    [SerializeField] private GameObject debuggingPanel;
+    [SerializeField] private GameObject toolkitButton;
+    [SerializeField] private GameObject lectureSelector;
 
     private FirebaseFirestore db;
-
-    private string userRole; // To store the role (Instructor or Student)
+    private string userRole;
 
     void Start()
     {
+        if (debuggingPanel == null || toolkitButton == null || lectureSelector == null)
+        {
+            Debug.LogError("UI references are not assigned in the Inspector.");
+            return;
+        }
+
         debuggingPanel.SetActive(false);
-        lectureSelector.SetActive(false); // Default state is inactive
-        toolkitButton.SetActive(true); // Always visible
+        lectureSelector.SetActive(false);
+        toolkitButton.SetActive(true);
 
         db = FirebaseFirestore.DefaultInstance;
     }
 
-    // Called when the "Connect" button is clicked
     public void OnConnectClicked()
     {
         string playerName = playerNameInput.text;
@@ -39,121 +41,106 @@ public class RoleHandler : MonoBehaviour
         string userId = userIdInput.text;
         string courseId = courseIdInput.text;
 
-        PhotonNetwork.NickName = playerName;
-
-        if (string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(playerName) || string.IsNullOrEmpty(userId))
         {
-            Debug.LogError("User ID cannot be empty.");
+            Debug.LogError("Player name or User ID cannot be empty.");
             return;
         }
 
-        if (PhotonNetwork.IsConnected)
-        {
-            ValidateUserRole(userId, isValid =>
-            {
-                if (isValid)
-                {
-                    // Validate access for both roles (role-specific logic inside this callback)
-                    ValidateUserAccess(userId, courseId, hasAccess =>
-                    {
-                        if (hasAccess)
-                        {
-                            Debug.Log($"User with role {userRole} validated for the course.");
-
-                            // Enter the room with the user's role
-                            EnterRoomWithRole(roomName);
-                        }
-                        else
-                        {
-                            Debug.LogError("User does not have access to the course.");
-                        }
-                    });
-                }
-                else
-                {
-                    Debug.LogError("Invalid user ID. Cannot determine role.");
-                }
-            });
-        }
-        else
+        if (!PhotonNetwork.IsConnected)
         {
             Debug.LogError("Not connected to Photon. Please wait...");
+            return;
         }
+
+        PhotonNetwork.NickName = playerName;
+
+        ValidateUserRole(userId, isValid =>
+        {
+            if (!isValid)
+            {
+                Debug.LogError("Invalid user ID. Cannot determine role.");
+                return;
+            }
+
+            ValidateUserAccess(userId, courseId, hasAccess =>
+            {
+                if (!hasAccess)
+                {
+                    Debug.LogError("User does not have access to the course.");
+                    return;
+                }
+
+                Debug.Log($"User validated with role {userRole}.");
+                EnterRoomWithRole(roomName);
+            });
+        });
     }
 
-    // Validate the user's role based on their userId
     private void ValidateUserRole(string userId, System.Action<bool> callback)
     {
         db.Collection("users").Document(userId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (task.IsCompleted)
+            if (task.IsFaulted || task.IsCanceled)
             {
-                DocumentSnapshot snapshot = task.Result;
-                if (snapshot.Exists && snapshot.ContainsField("role"))
-                {
-                    userRole = snapshot.GetValue<string>("role");
-                    callback(userRole == "Instructor" || userRole == "Student");
-                }
-                else
-                {
-                    Debug.LogError("User ID not found or role missing in the database.");
-                    callback(false);
-                }
+                Debug.LogError("Failed to validate user role: " + task.Exception);
+                callback(false);
+                return;
+            }
+
+            if (task.Result.Exists && task.Result.ContainsField("role"))
+            {
+                userRole = task.Result.GetValue<string>("role");
+
+                // Set the user role in RoleManager
+                RoleManager.Instance.SetRole(userId, userRole);
+
+                callback(userRole == "Instructor" || userRole == "Student");
             }
             else
             {
-                Debug.LogError("Failed to validate user role: " + task.Exception);
+                Debug.LogError("User ID not found or role missing in the database.");
                 callback(false);
             }
         });
     }
 
-    // Check if the user has access to a specific course
     private void ValidateUserAccess(string userId, string courseId, System.Action<bool> callback)
     {
         db.Collection("users").Document(userId).GetSnapshotAsync().ContinueWithOnMainThread(task =>
         {
-            if (task.IsCompleted)
+            if (task.IsFaulted || task.IsCanceled)
             {
-                DocumentSnapshot snapshot = task.Result;
-                if (snapshot.Exists && snapshot.ContainsField("course_id"))
-                {
-                    string storedCourseId = snapshot.GetValue<string>("course_id");
-                    callback(string.IsNullOrEmpty(courseId) || storedCourseId == courseId); // Allow all if no course is specified
-                }
-                else
-                {
-                    callback(false);
-                }
+                Debug.LogError("Failed to validate user access: " + task.Exception);
+                callback(false);
+                return;
+            }
+
+            if (task.Result.Exists && task.Result.ContainsField("course_id"))
+            {
+                string storedCourseId = task.Result.GetValue<string>("course_id");
+                callback(string.IsNullOrEmpty(courseId) || storedCourseId == courseId);
             }
             else
             {
-                Debug.LogError("Failed to validate user access: " + task.Exception);
                 callback(false);
             }
         });
     }
 
-    // Handle entering the room with the user's role
-    // Assuming the 'addButtons' and 'subtractButtons' arrays are populated in the LeaderboardManager
-    public void EnterRoomWithRole(string roomName)
+    private void EnterRoomWithRole(string roomName)
     {
-        // Assign role-specific logic
         if (userRole == "Instructor")
         {
             Debug.Log("Instructor joining the room.");
-            lectureSelector.SetActive(true); // Show lecture selector for instructors
+            lectureSelector.SetActive(true);
         }
         else if (userRole == "Student")
         {
             Debug.Log("Student joining the room.");
-            lectureSelector.SetActive(false); // Hide lecture selector for students
-
+            lectureSelector.SetActive(false);
         }
 
-        // Join the Photon room
         FindObjectOfType<ConnectToServer>().JoinRoom(roomName);
     }
-
-
 }
