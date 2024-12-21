@@ -17,10 +17,10 @@ namespace Photon.Realtime
 {
     using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY || NETFX_CORE
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
     using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     public class Region
@@ -66,7 +66,7 @@ namespace Photon.Realtime
             codeAsString = codeAsString.ToLower();
             int slash = codeAsString.IndexOf('/');
             this.Code = slash <= 0 ? codeAsString : codeAsString.Substring(0, slash);
-            this.Cluster = slash <= 0 ? "" : codeAsString.Substring(slash+1, codeAsString.Length-slash-1);
+            this.Cluster = slash <= 0 ? "" : codeAsString.Substring(slash + 1, codeAsString.Length - slash - 1);
         }
 
         public override string ToString()

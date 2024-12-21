@@ -21,14 +21,14 @@ namespace Photon.Realtime
     using System.Collections.Generic;
     using ExitGames.Client.Photon;
 
-    #if SUPPORTED_UNITY
+#if SUPPORTED_UNITY
     using UnityEngine;
     using Debug = UnityEngine.Debug;
-    #endif
-    #if SUPPORTED_UNITY || NETFX_CORE
+#endif
+#if SUPPORTED_UNITY || NETFX_CORE
     using Hashtable = ExitGames.Client.Photon.Hashtable;
     using SupportClass = ExitGames.Client.Photon.SupportClass;
-    #endif
+#endif
 
 
     /// <summary>
@@ -82,7 +82,7 @@ namespace Photon.Realtime
         private void ConfigUnitySockets()
         {
             Type websocketType = null;
-            #if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
+#if (UNITY_XBOXONE || UNITY_GAMECORE) && !UNITY_EDITOR
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketNativeSource, Assembly-CSharp", false);
             if (websocketType == null)
             {
@@ -96,7 +96,7 @@ namespace Photon.Realtime
             {
                 this.SocketImplementationConfig[ConnectionProtocol.Udp] = websocketType;    // on Xbox, the native socket plugin supports UDP as well
             }
-            #else
+#else
             // to support WebGL export in Unity, we find and assign the SocketWebTcp class (if it's in the project).
             // alternatively class SocketWebTcp might be in the Photon3Unity3D.dll
             websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, PhotonWebSocket", false);
@@ -108,13 +108,13 @@ namespace Photon.Realtime
             {
                 websocketType = Type.GetType("ExitGames.Client.Photon.SocketWebTcp, Assembly-CSharp", false);
             }
-            #if UNITY_WEBGL
+#if UNITY_WEBGL
             if (websocketType == null && this.DebugOut >= DebugLevel.WARNING)
             {
                 this.Listener.DebugReturn(DebugLevel.WARNING, "SocketWebTcp type not found in the usual Assemblies. This is required as wrapper for the browser WebSocket API. Make sure to make the PhotonLibs\\WebSocket code available.");
             }
-            #endif
-            #endif
+#endif
+#endif
 
             if (websocketType != null)
             {
@@ -122,10 +122,10 @@ namespace Photon.Realtime
                 this.SocketImplementationConfig[ConnectionProtocol.WebSocketSecure] = websocketType;
             }
 
-            #if NET_4_6 && (UNITY_EDITOR || !ENABLE_IL2CPP) && !NETFX_CORE
+#if NET_4_6 && (UNITY_EDITOR || !ENABLE_IL2CPP) && !NETFX_CORE
             this.SocketImplementationConfig[ConnectionProtocol.Udp] = typeof(SocketUdpAsync);
             this.SocketImplementationConfig[ConnectionProtocol.Tcp] = typeof(SocketTcpAsync);
-            #endif
+#endif
         }
 
 
@@ -219,17 +219,17 @@ namespace Photon.Realtime
                 gameProperties[GamePropertyKey.CleanupCacheOnLeave] = false;    // this is only informational for the clients which join
             }
 
-            #if SERVERSDK
+#if SERVERSDK
             op[ParameterCode.CheckUserOnJoin] = roomOptions.CheckUserOnJoin;
             if (roomOptions.CheckUserOnJoin)
             {
                 flags = flags | (int) RoomOptionBit.CheckUserOnJoin;
             }
-            #else
+#else
             // in PUN v1.88 and PUN 2, CheckUserOnJoin is set by default:
-            flags = flags | (int) RoomOptionBit.CheckUserOnJoin;
+            flags = flags | (int)RoomOptionBit.CheckUserOnJoin;
             op[ParameterCode.CheckUserOnJoin] = true;
-            #endif
+#endif
 
             if (roomOptions.PlayerTtl > 0 || roomOptions.PlayerTtl == -1)
             {
@@ -709,7 +709,7 @@ namespace Photon.Realtime
                 opParameters.Add(ParameterCode.ExpectedValues, expectedProperties);
             }
 
-            if (webflags!=null && webflags.HttpForward)
+            if (webflags != null && webflags.HttpForward)
             {
                 opParameters[ParameterCode.EventForward] = webflags.WebhookFlags;
             }
@@ -811,7 +811,7 @@ namespace Photon.Realtime
         {
             if (this.DebugOut >= DebugLevel.INFO)
             {
-                this.Listener.DebugReturn(DebugLevel.INFO, "OpAuthenticateOnce(): authValues = "  + authValues + ", region = " + regionCode + ", encryption = " + encryptionMode);
+                this.Listener.DebugReturn(DebugLevel.INFO, "OpAuthenticateOnce(): authValues = " + authValues + ", region = " + regionCode + ", encryption = " + encryptionMode);
             }
 
             var opParameters = new Dictionary<byte, object>();
@@ -1260,7 +1260,7 @@ namespace Photon.Realtime
         /// </summary>
         public const int InvalidEncryptionParameters = 32741; // 0x7FFF - 24,
 
-}
+    }
 
 
     /// <summary>
@@ -1922,9 +1922,9 @@ namespace Photon.Realtime
         public bool BroadcastPropsChangeToAll { get { return this.broadcastPropsChangeToAll; } set { this.broadcastPropsChangeToAll = value; } }
         private bool broadcastPropsChangeToAll = true;
 
-        #if SERVERSDK
+#if SERVERSDK
         public bool CheckUserOnJoin { get; set; }
-        #endif
+#endif
     }
 
 
@@ -1963,7 +1963,7 @@ namespace Photon.Realtime
 
     /// <summary>Types of lobbies define their behaviour and capabilities. Check each value for details.</summary>
     /// <remarks>Values of this enum must be matched by the server.</remarks>
-    public enum LobbyType :byte
+    public enum LobbyType : byte
     {
         /// <summary>Standard type and behaviour: While joined to this lobby clients get room-lists and JoinRandomRoom can use a simple filter to match properties (perfectly).</summary>
         Default = 0,
